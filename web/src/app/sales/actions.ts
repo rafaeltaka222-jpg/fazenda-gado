@@ -30,3 +30,18 @@ export async function createSale(formData: FormData) {
   revalidatePath("/dashboard");
   redirect("/sales?ok=1");
 }
+
+export async function voidSale(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
+  const id = g(formData, "id");
+  const reason = g(formData, "reason") ?? "Estorno operacional solicitado pelo gestor";
+  if (!id || !UUID.test(id) || reason.length < 3) redirect("/sales?erro=estorno");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("void_sale", { p_id: id, p_reason: reason });
+  if (error) redirect(`/sales?erro=${error.code === "42501" ? "perm" : "estorno"}`);
+  revalidatePath("/sales");
+  revalidatePath("/herd");
+  revalidatePath("/dashboard");
+  redirect("/sales?ok=estornado");
+}

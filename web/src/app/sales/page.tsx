@@ -3,14 +3,15 @@ import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
-import { createSale } from "./actions";
+import { createSale, voidSale } from "./actions";
 
 export const instant = false;
 
 const ERR: Record<string, string> = {
   tags: "Algum brinco não foi encontrado entre os animais ativos.",
   comprador: "Comprador inválido (precisa ter o papel Comprador em Pessoas).",
-  perm: "Você não tem permissão para registrar vendas.",
+  perm: "Você não tem permissão para realizar esta operação comercial.",
+  estorno: "Não foi possível estornar a venda. Informe o motivo (mínimo de 3 caracteres).",
   falha: "Não foi possível registrar a venda. Confira brincos, data (não pode ser futura) e valor.",
 };
 const money = (v: number | null | undefined) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -50,8 +51,14 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   const [sum, list, buyers] = await Promise.all([
     supabase.rpc("sales_summary", { p_farm: a.id, p_from: de, p_to: ate }),
-    supabase.from("sales").select("id, sale_date, buyer_id, total_amount, animal_count, document").eq("farm_id", a.id)
-      .gte("sale_date", de).lte("sale_date", ate).order("sale_date", { ascending: false }).limit(40),
+    supabase
+      .from("sales")
+      .select("id, sale_date, buyer_id, total_amount, animal_count, document, voided_at, void_reason")
+      .eq("farm_id", a.id)
+      .gte("sale_date", de)
+      .lte("sale_date", ate)
+      .order("sale_date", { ascending: false })
+      .limit(40),
     supabase.from("people").select("id, name").eq("farm_id", a.id).eq("active", true).contains("person_roles", ["comprador"]).order("name"),
   ]);
 
@@ -59,6 +66,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const rows: any[] = list.data ?? [];
   const buyerName = (id: string | null) => (id ? (buyers.data ?? []).find((b: any) => b.id === id)?.name ?? "—" : "Não informado");
   const canCreate = perms.includes("trade.create");
+  const canVoid = perms.includes("trade.update") || perms.includes("trade.delete");
 
   return (
     <AppShell {...shell}>
@@ -66,12 +74,17 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div>
           <h1 className="title" style={{ margin: 0 }}>Gestão Comercial: Vendas & Emissão GTA</h1>
           <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Registro de comercialização de lotes, faturamento, documentação fiscal e guias sanitárias
+            Registro de comercialização de lotes, faturamento, documentação fiscal, guias sanitárias e estorno auditado
           </p>
         </div>
       </div>
 
-      {sp.ok && <div className="flash">Venda comercial registrada com sucesso.</div>}
+      {sp.ok === "1" && <div className="flash">Venda comercial registrada com sucesso.</div>}
+      {sp.ok === "estornado" && (
+        <div className="flash">
+          Venda estornada com sucesso. Os animais retornaram automaticamente ao rebanho ativo e a auditoria foi registrada.
+        </div>
+      )}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
 
       {/* Filtro por Período */}
@@ -87,13 +100,13 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <div className="grid">
         <div className="card" style={{ borderLeft: "4px solid #059669" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <small className="muted">Faturamento no Período</small>
+            <small className="muted">Faturamento Líquido no Período</small>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div className="big" style={{ color: "var(--brand)" }}>{money(s.total)}</div>
-          <small className="muted">{s.sales} operação(ões) registrada(s)</small>
+          <small className="muted">{s.sales} operação(ões) ativa(s)</small>
         </div>
 
         <div className="card" style={{ borderLeft: "4px solid #0284c7" }}>
@@ -104,7 +117,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             </svg>
           </div>
           <div className="big" style={{ color: "#0284c7" }}>{s.animals} <span style={{ fontSize: 16 }}>cab.</span></div>
-          <small className="muted">Baixas automáticas no rebanho</small>
+          <small className="muted">Baixas efetivas no rebanho</small>
         </div>
 
         <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
@@ -116,7 +129,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             </svg>
           </div>
           <div className="big" style={{ color: "var(--amber)" }}>{s.avg_per_head == null ? "—" : money(s.avg_per_head)}</div>
-          <small className="muted">Preço médio de desinvestimento</small>
+          <small className="muted">Preço médio de comercialização</small>
         </div>
       </div>
 
@@ -125,7 +138,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <form action={createSale} className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <strong>Registrar Nova Venda Comercial</strong>
-            <span className="badge amber">Operação Irreversível</span>
+            <span className="badge">Rastreabilidade Auditada</span>
           </div>
           <div className="form2">
             <label style={{ gridColumn: "1 / -1" }}>
@@ -141,7 +154,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             </label>
             <label>Valor Total Negociado (R$) *<input name="total" inputMode="decimal" required placeholder="Ex: 48500.00" /></label>
             <label>Documentação (GTA / Nota Fiscal)<input name="document" placeholder="Ex: GTA 482910 / NF-e 12903" /></label>
-            <label style={{ gridColumn: "1 / -1" }}>Observações e Condições Comerciais<input name="notes" placeholder="Ex: Frigorífico JBS, pagamento à vista" /></label>
+            <label style={{ gridColumn: "1 / -1" }}>Observações e Condições Comerciais<input name="notes" placeholder="Ex: Frigorífico Boi Bom, pagamento à vista" /></label>
             <div style={{ alignSelf: "end", gridColumn: "1 / -1" }}>
               <ConfirmSubmit className="btn" label="Concluir e Registrar Venda" message="Confirmar a venda dos animais listados? Eles receberão baixa automática do rebanho ativo com registro contábil e de rastreabilidade." />
             </div>
@@ -163,26 +176,64 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               <thead>
                 <tr>
                   <th>Data</th>
+                  <th>Status</th>
                   <th>Quantidade</th>
                   <th>Comprador / Destino</th>
                   <th>Documento (GTA / NF)</th>
                   <th style={{ textAlign: "right" }}>Valor Total</th>
+                  {canVoid && <th style={{ textAlign: "right" }}>Ação</th>}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{fmtDate(r.sale_date)}</td>
-                    <td><strong>{r.animal_count} cab.</strong></td>
-                    <td>{buyerName(r.buyer_id)}</td>
-                    <td>
-                      {r.document ? <span className="badge">{r.document}</span> : <span className="muted">—</span>}
-                    </td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)" }}>
-                      {money(r.total_amount)}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((r) => {
+                  const isVoided = !!r.voided_at;
+                  return (
+                    <tr key={r.id} style={isVoided ? { opacity: 0.6 } : undefined}>
+                      <td>{fmtDate(r.sale_date)}</td>
+                      <td>
+                        {isVoided ? (
+                          <span className="badge red" title={r.void_reason || "Venda estornada"}>
+                            Estornada
+                          </span>
+                        ) : (
+                          <span className="badge">Ativa</span>
+                        )}
+                      </td>
+                      <td><strong>{r.animal_count} cab.</strong></td>
+                      <td>{buyerName(r.buyer_id)}</td>
+                      <td>
+                        {r.document ? <span className="badge neutral">{r.document}</span> : <span className="muted">—</span>}
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: isVoided ? "var(--muted)" : "var(--brand)", textDecoration: isVoided ? "line-through" : "none" }}>
+                        {money(r.total_amount)}
+                      </td>
+                      {canVoid && (
+                        <td style={{ textAlign: "right" }}>
+                          {isVoided ? (
+                            <span className="muted" style={{ fontSize: 12 }}>{r.void_reason ?? "Estornada"}</span>
+                          ) : (
+                            <form action={voidSale} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                              <input type="hidden" name="id" value={r.id} />
+                              <input
+                                type="text"
+                                name="reason"
+                                required
+                                minLength={3}
+                                placeholder="Motivo do estorno"
+                                style={{ width: 150, padding: "5px 8px", fontSize: 12 }}
+                              />
+                              <ConfirmSubmit
+                                className="btn ghost"
+                                label="Estornar"
+                                message="Confirmar o estorno desta venda? Os animais retornarão imediatamente ao rebanho ativo."
+                              />
+                            </form>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

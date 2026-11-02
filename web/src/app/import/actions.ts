@@ -46,6 +46,65 @@ export async function createLayout(formData: FormData) {
   redirect("/import?ok=layout");
 }
 
+export async function createScalePresets() {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
+  const supabase = await createClient();
+  const farmId = ctx.active.id;
+
+  const presets = [
+    {
+      farm_id: farmId,
+      name: "Balança Coimma KM-3 Plus (CSV)",
+      delimiter: "ponto_e_virgula",
+      has_header: true,
+      date_format: "DD/MM/YYYY",
+      decimal_separator: ",",
+      col_animal: 1,
+      col_date: 2,
+      col_time: 3,
+      col_weight: 4,
+      default_time: "08:00",
+      device_name: "Coimma KM-3 Plus",
+    },
+    {
+      farm_id: farmId,
+      name: "Tru-Test XR5000 / S3 (CSV)",
+      delimiter: "virgula",
+      has_header: true,
+      date_format: "DD/MM/YYYY",
+      decimal_separator: ".",
+      col_animal: 1,
+      col_date: 2,
+      col_time: 3,
+      col_weight: 4,
+      default_time: "08:00",
+      device_name: "Tru-Test XR5000",
+    },
+    {
+      farm_id: farmId,
+      name: "IdBeck 3.0 Curral (TXT)",
+      delimiter: "tab",
+      has_header: false,
+      date_format: "YYYY-MM-DD",
+      decimal_separator: ".",
+      col_animal: 1,
+      col_date: 2,
+      col_time: null,
+      col_weight: 3,
+      default_time: "12:00",
+      device_name: "IdBeck 3.0",
+    },
+  ];
+
+  for (const p of presets) {
+    await supabase.from("import_layouts").upsert(p, { onConflict: "farm_id,name", ignoreDuplicates: true });
+  }
+
+  revalidatePath("/import");
+  redirect("/import?ok=presets");
+}
+
 export async function confirmImport(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");

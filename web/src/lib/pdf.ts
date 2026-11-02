@@ -77,8 +77,9 @@ export function buildPdf(opts: { title: string; subtitle: string; columns: PCol[
     let c = "";
     const top = p === 0 ? firstTop : otherTop;
     if (p === 0) {
-      c += `BT /F2 14 Tf 0.12 0.23 0.17 rg ${M} ${PH - M - 12} Td (${pdfEscape(winAnsi(opts.title))}) Tj ET\n`;
-      c += `BT /F1 9 Tf 0.3 0.35 0.31 rg ${M} ${PH - M - 28} Td (${pdfEscape(fit(winAnsi(opts.subtitle), avail, 9))}) Tj ET\n`;
+      c += `BT /F2 8 Tf 0.00 0.40 0.20 rg ${M} ${PH - M - 2} Td (JR COMERCIO E EXPORTACAO DE CAFE - DIVISAO PECUARIA) Tj ET\n`;
+      c += `BT /F2 13 Tf 0.12 0.23 0.17 rg ${M} ${PH - M - 16} Td (${pdfEscape(winAnsi(opts.title))}) Tj ET\n`;
+      c += `BT /F1 9 Tf 0.3 0.35 0.31 rg ${M} ${PH - M - 29} Td (${pdfEscape(fit(winAnsi(opts.subtitle), avail, 9))}) Tj ET\n`;
     }
     // cabeçalho
     c += `0.12 0.23 0.17 rg ${M} ${top - HEAD} ${avail} ${HEAD} re f\n`;
@@ -115,7 +116,7 @@ export function buildPdf(opts: { title: string; subtitle: string; columns: PCol[
   objs[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`;
   objs[3] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`;
   objs[4] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`;
-  objs[5] = `<< /Title (${pdfEscape(winAnsi(opts.title))}) /Producer (Fazenda Gado) >>`;
+  objs[5] = `<< /Title (${pdfEscape(winAnsi(opts.title))}) /Producer (JR Comercio e Exportacao de Cafe) >>`;
   streams.forEach((s, p) => {
     objs[pageIds[p] - 1] = `<< /Length ${s.length} >>\nstream\n${s}endstream`;
     objs[pageIds[p]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${pageIds[p] - 1} 0 R >>`;
