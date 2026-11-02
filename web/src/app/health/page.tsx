@@ -31,7 +31,7 @@ export default async function HealthPage({
   if (!a) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Sanidade</h1>
+        <h1 className="title">Controle Sanitário & Vacinas</h1>
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
@@ -42,7 +42,7 @@ export default async function HealthPage({
   if (!perms.includes("health.view")) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Sanidade</h1>
+        <h1 className="title">Controle Sanitário & Vacinas</h1>
         <div className="card"><p className="muted">Seu perfil não tem permissão para ver a sanidade do rebanho.</p></div>
       </AppShell>
     );
@@ -54,7 +54,7 @@ export default async function HealthPage({
     supabase.from("health_products").select("id, name, kind, withdrawal_days, active").eq("farm_id", a.id).order("name"),
     supabase.from("lots").select("id, name").eq("farm_id", a.id).order("name"),
     supabase.from("health_events").select("id, animal_id, product_id, event_date, next_due_date")
-      .eq("farm_id", a.id).is("voided_at", null).order("created_at", { ascending: false }).limit(10),
+      .eq("farm_id", a.id).is("voided_at", null).order("created_at", { ascending: false }).limit(15),
   ]);
   const al: any = alerts.data ?? { overdue: 0, upcoming: 0, in_withdrawal: 0, items: [] };
   const prods: any[] = products.data ?? [];
@@ -70,104 +70,220 @@ export default async function HealthPage({
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Sanidade</h1>
-      {sp.ok === "produto" && <div className="flash">Produto cadastrado.</div>}
-      {sp.ok && sp.ok !== "produto" && sp.ok !== "anulada" && <div className="flash">Registrado em {sp.ok} animal(is).</div>}
-      {sp.ok === "anulada" && <div className="flash">Aplicação anulada.</div>}
-      {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
-
-      <div className="grid">
-        <div className="card"><small className="muted">Doses atrasadas</small><div className="big">{al.overdue}</div></div>
-        <div className="card"><small className="muted">A vencer em 30 dias</small><div className="big">{al.upcoming}</div></div>
-        <div className="card"><small className="muted">Animais em carência</small><div className="big">{al.in_withdrawal}</div></div>
+      <div className="head">
+        <div>
+          <h1 className="title" style={{ margin: 0 }}>Controle Sanitário & Vacinas</h1>
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
+            Gestão de protocolos profiláticos, vacinações em lote e períodos de carência
+          </p>
+        </div>
       </div>
 
+      {sp.ok === "produto" && <div className="flash">Produto cadastrado com sucesso no catálogo.</div>}
+      {sp.ok && sp.ok !== "produto" && sp.ok !== "anulada" && <div className="flash">Aplicação registrada com sucesso em {sp.ok} animal(is).</div>}
+      {sp.ok === "anulada" && <div className="flash">Aplicação anulada com sucesso.</div>}
+      {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
+
+      {/* Grid de Alertas Sanitários */}
+      <div className="grid">
+        <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Doses Atrasadas</small>
+            <span style={{ fontSize: 18 }}>🚨</span>
+          </div>
+          <div className="big" style={{ color: al.overdue > 0 ? "var(--red)" : "var(--ink)" }}>{al.overdue}</div>
+          <small className="muted">Exigem atenção imediata</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">A Vencer (Próximos 30d)</small>
+            <span style={{ fontSize: 18 }}>📅</span>
+          </div>
+          <div className="big" style={{ color: al.upcoming > 0 ? "var(--amber)" : "var(--ink)" }}>{al.upcoming}</div>
+          <small className="muted">Planejamento sanitário</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #059669" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Animais em Carência</small>
+            <span style={{ fontSize: 18 }}>⏳</span>
+          </div>
+          <div className="big" style={{ color: "var(--brand)" }}>{al.in_withdrawal}</div>
+          <small className="muted">Retenção de abate/venda</small>
+        </div>
+      </div>
+
+      {/* Próximas Doses & Alertas */}
       <div className="card">
-        <strong>Próximas doses</strong>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <strong>🗓️ Próximas Aplicações & Vacinas Agendadas</strong>
+          <span className="badge neutral">{(al.items ?? []).length} pendência(s)</span>
+        </div>
         {(al.items ?? []).length === 0 ? (
-          <p className="muted">Nenhuma dose atrasada ou a vencer nos próximos 30 dias.</p>
+          <div style={{ padding: "20px 0", textAlign: "center", color: "var(--muted)" }}>
+            <p style={{ margin: 0, fontSize: 14 }}>Tudo em dia! Nenhuma dose atrasada ou a vencer nos próximos 30 dias.</p>
+          </div>
         ) : (
-          (al.items as any[]).map((i, k) => (
-            <div className="row" key={k}>
-              <span>
-                <Link href={`/herd/${i.animal_id}`} style={{ color: "var(--green)", fontWeight: 600 }}>{i.ear_tag}</Link>
-                <span className="muted"> · {i.product}</span>
-              </span>
-              <span className={i.status === "atrasada" ? "error" : "muted"}>
-                {i.status === "atrasada" ? "atrasada desde " : "vence em "}{fmtDate(i.due)}
-              </span>
-            </div>
-          ))
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Animal</th>
+                  <th>Produto</th>
+                  <th>Data de Vencimento</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(al.items as any[]).map((i, k) => (
+                  <tr key={k}>
+                    <td>
+                      <Link href={`/herd/${i.animal_id}`} style={{ color: "var(--brand)", fontWeight: 700 }}>
+                        Brinco #{i.ear_tag}
+                      </Link>
+                    </td>
+                    <td><strong>{i.product}</strong></td>
+                    <td>{fmtDate(i.due)}</td>
+                    <td>
+                      <span className={`badge ${i.status === "atrasada" ? "red" : "amber"}`}>
+                        {i.status === "atrasada" ? `Atrasada desde ${fmtDate(i.due)}` : `Vence em ${fmtDate(i.due)}`}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
+      {/* Formulário de Aplicação em Lote */}
       {canCreate && (
         <form action={registerHealth} className="card">
-          <strong>Registrar aplicação (vacina ou medicamento)</strong>
+          <strong>💉 Lançar Aplicação Sanitária (Individual ou por Lote)</strong>
+          <p className="muted" style={{ margin: "4px 0 16px", fontSize: 13.5 }}>
+            Registre vacinas, vermífugos ou medicamentos. O sistema calcula a carência e atualiza a ficha de cada animal.
+          </p>
           <input type="hidden" name="back" value="/health" />
-          <div className="form2" style={{ marginTop: 12 }}>
-            <label>Produto
+          <div className="form2">
+            <label>Produto Veterinário *
               <select name="product_id" required defaultValue="">
-                <option value="" disabled>Selecione</option>
-                {prods.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name} ({p.kind})</option>)}
+                <option value="" disabled>Selecione o produto</option>
+                {prods.filter((p) => p.active).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.kind === "vacina" ? "Vacina" : "Medicamento"}{p.withdrawal_days > 0 ? ` · ${p.withdrawal_days}d carência` : ""})
+                  </option>
+                ))}
               </select>
             </label>
-            <label>Data da aplicação<input name="date" type="date" defaultValue={today} max={today} required /></label>
-            <label>Próxima dose (opcional)<input name="next" type="date" /></label>
-            <label>Dose<input name="dose" placeholder="ex.: 2 ml" /></label>
-            <label>Lote do produto<input name="product_lot" /></label>
-            <label>Observações<input name="notes" /></label>
-            <label>Brincos (separados por vírgula ou espaço)<input name="tags" placeholder="000123, 000124" /></label>
-            <label>ou todos os ativos de um lote
-              <select name="lot_id" defaultValue=""><option value="">—</option>
-                {(lots.data ?? []).map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <label>Data da Aplicação *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Dose Aplicada<input name="dose" placeholder="Ex: 5 ml, 2 comprimidos" /></label>
+            <label>Previsão da Próxima Dose<input name="next" type="date" /></label>
+            <label>Lote do Fabricante / Partida<input name="product_lot" placeholder="Ex: LOTE-2026/A" /></label>
+            <label>Observações do Procedimento<input name="notes" placeholder="Ex: Vacinação semestral contra febre aftosa" /></label>
+            <label>Aplicar em Lote Inteiro
+              <select name="lot_id" defaultValue="">
+                <option value="">(Selecione um lote ou digite os brincos ao lado)</option>
+                {(lots.data ?? []).map((l: any) => <option key={l.id} value={l.id}>Todos os ativos do {l.name}</option>)}
               </select>
+            </label>
+            <label>Ou Brincos Específicos (separados por vírgula)
+              <input name="tags" placeholder="Ex: 000101, 000102, 000103" />
             </label>
             <div style={{ alignSelf: "end" }}>
-              <ConfirmSubmit className="btn" label="Registrar" message="Registrar a aplicação nos animais informados? Cada aplicação entra no histórico do animal." />
+              <ConfirmSubmit className="btn" label="Registrar Aplicação" message="Registrar a aplicação nos animais selecionados? Cada animal terá o registro gravado em seu histórico." />
             </div>
           </div>
         </form>
       )}
 
-      <div className="card">
-        <strong>Últimos registros</strong>
-        {recentRows.length === 0 ? (
-          <p className="muted">Nenhuma aplicação registrada.</p>
-        ) : (
-          recentRows.map((e) => (
-            <div className="row" key={e.id}>
-              <span>
-                <Link href={`/herd/${e.animal_id}`} style={{ color: "var(--green)", fontWeight: 600 }}>{tagById.get(e.animal_id) ?? "—"}</Link>
-                <span className="muted"> · {prodName(e.product_id)}</span>
-              </span>
-              <span className="muted">{fmtDate(e.event_date)}{e.next_due_date ? ` · próxima ${fmtDate(e.next_due_date)}` : ""}</span>
+      {/* Histórico Recente e Catálogo */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
+        {/* Histórico Recente */}
+        <div className="card">
+          <strong>📋 Histórico Recente de Aplicações</strong>
+          {recentRows.length === 0 ? (
+            <p className="muted" style={{ marginTop: 8 }}>Nenhuma aplicação recente registrada.</p>
+          ) : (
+            <div className="table-container" style={{ marginTop: 12 }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Animal</th>
+                    <th>Produto</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRows.map((e) => (
+                    <tr key={e.id}>
+                      <td>
+                        <Link href={`/herd/${e.animal_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
+                          #{tagById.get(e.animal_id) ?? "—"}
+                        </Link>
+                      </td>
+                      <td><strong>{prodName(e.product_id)}</strong></td>
+                      <td>{fmtDate(e.event_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
-        )}
-      </div>
+          )}
+        </div>
 
-      <div className="card">
-        <strong>Produtos</strong>
-        {prods.map((p) => (
-          <div className="row" key={p.id}>
-            <span>{p.name} <span className="muted">· {p.kind}</span></span>
-            <span className="muted">{p.withdrawal_days > 0 ? `carência ${p.withdrawal_days} dia(s)` : "sem carência"}{p.active ? "" : " · inativo"}</span>
+        {/* Catálogo de Produtos e Cadastro */}
+        <div className="card">
+          <strong>📦 Catálogo de Produtos Sanitários</strong>
+          <div className="table-container" style={{ marginTop: 12 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tipo</th>
+                  <th>Carência</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prods.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <strong>{p.name}</strong>
+                      {!p.active && <span className="muted"> (inativo)</span>}
+                    </td>
+                    <td><span className="badge neutral">{p.kind}</span></td>
+                    <td>
+                      {p.withdrawal_days > 0 ? (
+                        <span className="badge amber">{p.withdrawal_days} dias</span>
+                      ) : (
+                        <span className="badge">Isento</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-        {canCreate && (
-          <form action={createProduct} className="form2" style={{ marginTop: 12 }}>
-            <label>Nome do produto<input name="name" required /></label>
-            <label>Tipo
-              <select name="kind" defaultValue="vacina"><option value="vacina">Vacina</option><option value="medicamento">Medicamento</option></select>
-            </label>
-            <label>Carência (dias)<input name="withdrawal_days" inputMode="numeric" defaultValue="0" /></label>
-            <div style={{ alignSelf: "end" }}><button className="btn">Cadastrar produto</button></div>
-          </form>
-        )}
-        <p className="muted">Ajuste a carência conforme a bula de cada produto. O sistema não traz valores prontos de carência.</p>
+
+          {canCreate && (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-secondary)" }}>+ Cadastrar Novo Medicamento / Vacina</span>
+              <form action={createProduct} className="form2" style={{ marginTop: 10 }}>
+                <label>Nome Comercial *<input name="name" required placeholder="Ex: Ivermectina 1%" /></label>
+                <label>Classificação
+                  <select name="kind" defaultValue="vacina">
+                    <option value="vacina">Vacina</option>
+                    <option value="medicamento">Medicamento / Vermífugo</option>
+                  </select>
+                </label>
+                <label>Carência Sanitária (dias)<input name="withdrawal_days" inputMode="numeric" defaultValue="0" placeholder="0 se sem carência" /></label>
+                <div style={{ alignSelf: "end" }}><button className="btn">Adicionar ao Catálogo</button></div>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
-      <p className="muted">TODO: tratamentos com diagnóstico, calendário sanitário por categoria e alertas por e-mail ou WhatsApp.</p>
     </AppShell>
   );
 }

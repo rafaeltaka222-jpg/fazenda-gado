@@ -55,55 +55,128 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Pesagens</h1>
+      <div className="head" style={{ marginBottom: 4 }}>
+        <div>
+          <h1 className="title">Lançamento de Pesagens</h1>
+          <p className="muted" style={{ margin: "4px 0 0 0", fontSize: 14 }}>
+            Manejo de pesagem em lote no curral/brete com cálculo automático de GMD e alertas de variação.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Link href="/import" className="btn ghost" style={{ gap: 6 }}>
+            <span>📥</span> Importar da Balança (TXT/CSV)
+          </Link>
+        </div>
+      </div>
 
-      {sp.ok && <div className="flash">{sp.ok} pesagem(ns) registrada(s).</div>}
+      {sp.ok && <div className="flash">✓ {sp.ok} pesagem(ns) registrada(s) com sucesso no histórico.</div>}
       {Number(sp.av) > 0 && (
         <div className="flash bad" role="alert">
-          Atenção: {sp.av} pesagem(ns) com variação brusca em relação à anterior. Confira os valores na ficha dos animais; se houver erro, anule a pesagem.
+          ⚠️ Atenção: {sp.av} pesagem(ns) com variação brusca em relação à pesagem anterior. Confira os valores lançados.
         </div>
       )}
-      {sp.erro === "dup" && <div className="flash bad" role="alert">Já existe uma pesagem para um dos animais nesse mesmo dia e horário.</div>}
-      {sp.erro === "perm" && <div className="flash bad" role="alert">Você não tem permissão para lançar pesagens.</div>}
+      {sp.erro === "dup" && (
+        <div className="flash bad" role="alert">
+          Já existe uma pesagem para um dos animais no mesmo dia e horário.
+        </div>
+      )}
+      {sp.erro === "perm" && (
+        <div className="flash bad" role="alert">
+          Você não tem permissão para lançar pesagens.
+        </div>
+      )}
       {sp.erro === "peso" && (
         <div className="flash bad" role="alert">
-          Não foi possível registrar. Preencha pelo menos um peso válido (maior que zero), com data e horário que não sejam futuros, em animais ativos.
+          Não foi possível registrar. Preencha pelo menos um peso válido com data/hora válidas.
         </div>
       )}
 
+      {/* Filtro de Lote */}
       <form className="card filters" method="get">
-        <label>Lote
+        <label>
+          Filtrar por Lote de Manejo
           <select name="lote" defaultValue={lote}>
-            <option value="">Todos</option>
-            {(lots.data ?? []).map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <option value="">Todos os lotes da fazenda</option>
+            {(lots.data ?? []).map((l: any) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
           </select>
         </label>
-        <button className="btn">Filtrar</button>
-        <Link href="/weighings" className="btn ghost">Limpar</Link>
+        <button className="btn">Carregar Lote</button>
+        {lote && <Link href="/weighings" className="btn ghost">Ver Todos</Link>}
       </form>
 
+      {/* Formulário de Pesagem em Lote */}
       <form action={registerWeighings} className="card">
         <input type="hidden" name="back" value={back} />
-        <div className="form2">
-          <label>Data da pesagem<input name="date" type="date" defaultValue={today} max={today} required /></label>
-          <label>Horário<input name="time" type="time" defaultValue={now} required /></label>
+        
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
+          <strong style={{ fontSize: 16 }}>Dados do Manejo</strong>
+          <span className="badge neutral">
+            {rows.length} de {animals.count ?? 0} animais carregados
+          </span>
         </div>
+
+        <div className="form2" style={{ background: "var(--bg-subtle)", padding: "14px 16px", borderRadius: 12, marginBottom: 16 }}>
+          <label>
+            Data da Pesagem
+            <input name="date" type="date" defaultValue={today} max={today} required />
+          </label>
+          <label>
+            Horário da Pesagem
+            <input name="time" type="time" defaultValue={now} required />
+          </label>
+        </div>
+
         {rows.length === 0 ? (
-          <p className="muted">Nenhum animal ativo encontrado.</p>
+          <div style={{ textAlign: "center", padding: "32px 16px" }}>
+            <p className="muted" style={{ fontSize: 15 }}>Nenhum animal ativo encontrado neste lote.</p>
+          </div>
         ) : (
-          <div style={{ overflowX: "auto", marginTop: 12 }}>
+          <div className="table-container">
             <table className="table">
-              <thead><tr><th>Brinco</th><th>Nome</th><th>Lote</th><th>Última pesagem (kg)</th><th>Novo peso (kg)</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Brinco</th>
+                  <th>Nome</th>
+                  <th>Lote</th>
+                  <th>Última Pesagem</th>
+                  <th style={{ width: 170 }}>Novo Peso (kg)</th>
+                </tr>
+              </thead>
               <tbody>
                 {rows.map((r) => {
                   const s = wmap.get(r.id);
                   return (
                     <tr key={r.id}>
-                      <td><Link href={`/herd/${r.id}`} style={{ color: "var(--green)", fontWeight: 600 }}>{r.ear_tag}</Link></td>
-                      <td>{r.name ?? "—"}</td>
-                      <td>{lotName(r.lot_id)}</td>
-                      <td>{s ? Number(s.last_weight).toFixed(1).replace(".", ",") : "—"}</td>
-                      <td><input name={`peso_${r.id}`} inputMode="decimal" aria-label={`Peso de ${r.ear_tag}`} style={{ width: 110 }} /></td>
+                      <td>
+                        <Link href={`/herd/${r.id}`} style={{ color: "var(--brand)", fontWeight: 700, fontSize: 14.5 }}>
+                          {r.ear_tag}
+                        </Link>
+                      </td>
+                      <td style={{ color: r.name ? "var(--ink)" : "var(--muted)" }}>{r.name ?? "—"}</td>
+                      <td><span className="badge neutral">{lotName(r.lot_id)}</span></td>
+                      <td style={{ fontWeight: 500 }}>
+                        {s ? `${Number(s.last_weight).toFixed(1).replace(".", ",")} kg` : <span className="muted">Sem peso anterior</span>}
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <input
+                            name={`peso_${r.id}`}
+                            inputMode="decimal"
+                            placeholder="0,0"
+                            aria-label={`Peso de ${r.ear_tag}`}
+                            style={{
+                              width: 100,
+                              textAlign: "right",
+                              fontWeight: 700,
+                              padding: "8px 10px",
+                              borderColor: "var(--brand-border)",
+                            }}
+                          />
+                          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>kg</span>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -111,13 +184,19 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
             </table>
           </div>
         )}
-        <p className="muted">
-          {animals.count ?? 0} animal(is) ativo(s){(animals.count ?? 0) > LIMIT ? ` · mostrando os ${LIMIT} primeiros (use o filtro de lote)` : ""}.
-          Só os animais com peso preenchido são lançados. O horário é interpretado como horário de Brasília.
-        </p>
-        {rows.length > 0 && (
-          <ConfirmButton className="btn" label="Registrar pesagens" message="Registrar as pesagens preenchidas? Cada uma entra no histórico do animal." />
-        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, flexWrap: "wrap", gap: 14 }}>
+          <p className="muted" style={{ margin: 0, fontSize: 13, maxWidth: 600 }}>
+            💡 Dica de campo: preencha apenas os animais que subiram na balança. As linhas vazias são ignoradas e não afetam o histórico anterior.
+          </p>
+          {rows.length > 0 && (
+            <ConfirmButton
+              className="btn"
+              label="Salvar Pesagens do Lote"
+              message="Confirmar o registro das pesagens preenchidas? O peso e GMD de cada animal serão recalculados imediatamente."
+            />
+          )}
+        </div>
       </form>
     </AppShell>
   );

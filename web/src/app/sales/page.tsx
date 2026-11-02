@@ -8,8 +8,10 @@ import { createSale } from "./actions";
 export const instant = false;
 
 const ERR: Record<string, string> = {
-  tags: "Algum brinco não foi encontrado entre os animais ativos.", comprador: "Comprador inválido (precisa ter o papel Comprador).",
-  perm: "Você não tem permissão para registrar vendas.", falha: "Não foi possível registrar. Confira brincos, data (não pode ser futura) e valor.",
+  tags: "Algum brinco não foi encontrado entre os animais ativos.",
+  comprador: "Comprador inválido (precisa ter o papel Comprador em Pessoas).",
+  perm: "Você não tem permissão para registrar vendas.",
+  falha: "Não foi possível registrar a venda. Confira brincos, data (não pode ser futura) e valor.",
 };
 const money = (v: number | null | undefined) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string) => d.split("-").reverse().join("/");
@@ -21,82 +23,163 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const ctx = await getContext();
   const a = ctx.active;
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "sales" };
+
   if (!a) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Vendas</h1>
+        <h1 className="title">Gestão Comercial & Vendas</h1>
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
   }
+
   const supabase = await createClient();
   const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
   if (!perms.includes("trade.view")) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Vendas</h1>
-        <div className="card"><p className="muted">Seu perfil não tem permissão para ver as vendas.</p></div>
+        <h1 className="title">Gestão Comercial & Vendas</h1>
+        <div className="card"><p className="muted">Seu perfil não tem permissão para ver as vendas comerciais.</p></div>
       </AppShell>
     );
   }
+
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Bahia" });
   const de = sp.de && DATE.test(sp.de) ? sp.de : today.slice(0, 8) + "01";
   const ate = sp.ate && DATE.test(sp.ate) ? sp.ate : today;
+
   const [sum, list, buyers] = await Promise.all([
     supabase.rpc("sales_summary", { p_farm: a.id, p_from: de, p_to: ate }),
     supabase.from("sales").select("id, sale_date, buyer_id, total_amount, animal_count, document").eq("farm_id", a.id)
-      .gte("sale_date", de).lte("sale_date", ate).order("sale_date", { ascending: false }).limit(30),
+      .gte("sale_date", de).lte("sale_date", ate).order("sale_date", { ascending: false }).limit(40),
     supabase.from("people").select("id, name").eq("farm_id", a.id).eq("active", true).contains("person_roles", ["comprador"]).order("name"),
   ]);
+
   const s: any = sum.data ?? { total: 0, sales: 0, animals: 0, avg_per_head: null, by_buyer: [] };
   const rows: any[] = list.data ?? [];
-  const buyerName = (id: string | null) => (id ? (buyers.data ?? []).find((b: any) => b.id === id)?.name ?? "—" : "—");
+  const buyerName = (id: string | null) => (id ? (buyers.data ?? []).find((b: any) => b.id === id)?.name ?? "—" : "Não informado");
   const canCreate = perms.includes("trade.create");
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Vendas</h1>
-      {sp.ok && <div className="flash">Venda registrada.</div>}
-      {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
-      <form className="card filters" method="get">
-        <label>De<input type="date" name="de" defaultValue={de} /></label>
-        <label>Até<input type="date" name="ate" defaultValue={ate} /></label>
-        <button className="btn">Filtrar</button>
-      </form>
-      <div className="grid">
-        <div className="card"><small className="muted">Receita no período</small><div className="big">{money(s.total)}</div></div>
-        <div className="card"><small className="muted">Animais vendidos</small><div className="big">{s.animals}</div></div>
-        <div className="card"><small className="muted">Valor médio por cabeça</small><div className="big">{s.avg_per_head == null ? "—" : money(s.avg_per_head)}</div></div>
+      <div className="head">
+        <div>
+          <h1 className="title" style={{ margin: 0 }}>Gestão Comercial: Vendas & Emissão GTA</h1>
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
+            Registro de comercialização de lotes, faturamento, documentação fiscal e guias sanitárias
+          </p>
+        </div>
       </div>
+
+      {sp.ok && <div className="flash">Venda comercial registrada com sucesso.</div>}
+      {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
+
+      {/* Filtro por Período */}
+      <form className="card filters" method="get" style={{ padding: "16px 20px" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap", width: "100%" }}>
+          <label>Data Inicial<input type="date" name="de" defaultValue={de} /></label>
+          <label>Data Final<input type="date" name="ate" defaultValue={ate} /></label>
+          <button className="btn" style={{ height: 42 }}>Filtrar Período</button>
+        </div>
+      </form>
+
+      {/* Métricas Comerciais */}
+      <div className="grid">
+        <div className="card" style={{ borderLeft: "4px solid #059669" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Faturamento no Período</small>
+            <span style={{ fontSize: 18 }}>💰</span>
+          </div>
+          <div className="big" style={{ color: "var(--brand)" }}>{money(s.total)}</div>
+          <small className="muted">{s.sales} operação(ões) registrada(s)</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #0284c7" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Animais Comercializados</small>
+            <span style={{ fontSize: 18 }}>🐂</span>
+          </div>
+          <div className="big" style={{ color: "#0284c7" }}>{s.animals} <span style={{ fontSize: 16 }}>cab.</span></div>
+          <small className="muted">Baixas automáticas no rebanho</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Valor Médio por Cabeça</small>
+            <span style={{ fontSize: 18 }}>📈</span>
+          </div>
+          <div className="big" style={{ color: "var(--amber)" }}>{s.avg_per_head == null ? "—" : money(s.avg_per_head)}</div>
+          <small className="muted">Preço médio de desinvestimento</small>
+        </div>
+      </div>
+
+      {/* Formulário de Nova Venda */}
       {canCreate && (
         <form action={createSale} className="card">
-          <strong>Registrar venda</strong>
-          <div className="form2" style={{ marginTop: 12 }}>
-            <label>Brincos vendidos (separados por vírgula ou espaço) *<textarea name="tags" rows={3} required /></label>
-            <label>Data<input name="date" type="date" defaultValue={today} max={today} required /></label>
-            <label>Comprador
-              <select name="buyer_id" defaultValue=""><option value="">(não informado)</option>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <strong>📝 Registrar Nova Venda Comercial</strong>
+            <span className="badge amber">Operação Irreversível</span>
+          </div>
+          <div className="form2">
+            <label style={{ gridColumn: "1 / -1" }}>
+              Identificação dos Brincos Vendidos (separados por vírgula ou espaço) *
+              <textarea name="tags" rows={3} required placeholder="Ex: 000101, 000102, 000103, 000104" style={{ fontFamily: "monospace" }} />
+            </label>
+            <label>Data da Negociação *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Cliente / Comprador
+              <select name="buyer_id" defaultValue="">
+                <option value="">(Selecione um comprador cadastrado)</option>
                 {(buyers.data ?? []).map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </label>
-            <label>Valor total (R$) *<input name="total" inputMode="decimal" required /></label>
-            <label>Documento (NF / GTA)<input name="document" placeholder="Ex: NF 1042 / GTA 98321" /></label>
-            <label>Observações<input name="notes" /></label>
-            <div style={{ alignSelf: "end" }}>
-              <ConfirmSubmit className="btn" label="Registrar venda" message="Registrar a venda? Os animais saem do rebanho ativo. Esta operação não pode ser desfeita pela tela." />
+            <label>Valor Total Negociado (R$) *<input name="total" inputMode="decimal" required placeholder="Ex: 48500.00" /></label>
+            <label>Documentação (GTA / Nota Fiscal)<input name="document" placeholder="Ex: GTA 482910 / NF-e 12903" /></label>
+            <label style={{ gridColumn: "1 / -1" }}>Observações e Condições Comerciais<input name="notes" placeholder="Ex: Frigorífico JBS, pagamento à vista" /></label>
+            <div style={{ alignSelf: "end", gridColumn: "1 / -1" }}>
+              <ConfirmSubmit className="btn" label="Concluir e Registrar Venda" message="Confirmar a venda dos animais listados? Eles receberão baixa automática do rebanho ativo com registro contábil e de rastreabilidade." />
             </div>
           </div>
-          <p className="muted">Cadastre o comprador em Pessoas (papel Comprador). Informe a GTA ou NF no campo de documento.</p>
         </form>
       )}
+
+      {/* Histórico de Vendas */}
       <div className="card">
-        <strong>Vendas do período</strong>
-        {rows.length === 0 ? <p className="muted">Nenhuma venda no período.</p> : rows.map((r) => (
-          <div className="row" key={r.id}>
-            <span>{fmtDate(r.sale_date)} · {r.animal_count} animal(is) · {buyerName(r.buyer_id)}{r.document ? ` · Doc: ${r.document}` : ""}</span>
-            <strong>{money(r.total_amount)}</strong>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <strong>📋 Livro de Vendas do Período ({rows.length})</strong>
+          <span className="badge neutral">Rastreabilidade Comercial</span>
+        </div>
+        {rows.length === 0 ? (
+          <p className="muted" style={{ padding: "20px 0", textAlign: "center" }}>Nenhuma venda comercial registrada no período selecionado.</p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Quantidade</th>
+                  <th>Comprador / Destino</th>
+                  <th>Documento (GTA / NF)</th>
+                  <th style={{ textAlign: "right" }}>Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>{fmtDate(r.sale_date)}</td>
+                    <td><strong>{r.animal_count} cab.</strong></td>
+                    <td>{buyerName(r.buyer_id)}</td>
+                    <td>
+                      {r.document ? <span className="badge">{r.document}</span> : <span className="muted">—</span>}
+                    </td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)" }}>
+                      {money(r.total_amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        )}
       </div>
     </AppShell>
   );

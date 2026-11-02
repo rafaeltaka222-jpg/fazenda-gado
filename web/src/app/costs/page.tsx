@@ -7,11 +7,20 @@ import { createCost, voidCost } from "./actions";
 
 export const instant = false;
 
-const CAT: Record<string, string> = { racao: "Ração e suplementos", sanidade: "Sanidade", mao_de_obra: "Mão de obra", combustivel: "Combustível", manutencao: "Manutenção", outros: "Outros" };
-const TARGET: Record<string, string> = { fazenda: "Fazenda (geral)", lote: "Lote", pasto: "Pasto", animal: "Animal" };
+const CAT: Record<string, string> = {
+  racao: "Ração e Suplementos",
+  sanidade: "Sanidade & Medicamentos",
+  mao_de_obra: "Mão de Obra",
+  combustivel: "Combustível",
+  manutencao: "Manutenção & Benfeitorias",
+  outros: "Outros Custos Operacionais",
+};
+const TARGET: Record<string, string> = { fazenda: "Fazenda (Geral)", lote: "Lote Específico", pasto: "Pasto / Piquete", animal: "Animal Individual" };
 const ERR: Record<string, string> = {
-  perm: "Você não tem permissão para esta operação.", animal: "Brinco não encontrado nesta fazenda.",
-  alvo: "Escolha o lote ou o pasto do custo.", falha: "Não foi possível registrar. Confira valor, data e descrição.",
+  perm: "Você não tem permissão para esta operação.",
+  animal: "Brinco informado não foi encontrado nesta fazenda.",
+  alvo: "Escolha o lote ou o pasto correspondente ao custo.",
+  falha: "Não foi possível registrar o custo. Confira valor, data e descrição.",
 };
 const money = (v: number | null | undefined) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string) => d.split("-").reverse().join("/");
@@ -23,20 +32,22 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   const ctx = await getContext();
   const a = ctx.active;
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "costs" };
+
   if (!a) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Custos</h1>
+        <h1 className="title">Gestão Financeira & Custos</h1>
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
   }
+
   const supabase = await createClient();
   const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
   if (!perms.includes("costs.view")) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Custos</h1>
+        <h1 className="title">Gestão Financeira & Custos</h1>
         <div className="card"><p className="muted">Seu perfil não tem permissão para ver os custos.</p></div>
       </AppShell>
     );
@@ -50,7 +61,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   const [sum, list, lots, pastures] = await Promise.all([
     supabase.rpc("cost_summary", { p_farm: a.id, p_from: de, p_to: ate }),
     supabase.from("cost_entries").select("id, cost_date, description, category, amount, target_type, stock_movement_id")
-      .eq("farm_id", a.id).is("voided_at", null).gte("cost_date", de).lte("cost_date", ate).order("cost_date", { ascending: false }).limit(30),
+      .eq("farm_id", a.id).is("voided_at", null).gte("cost_date", de).lte("cost_date", ate).order("cost_date", { ascending: false }).limit(40),
     supabase.from("lots").select("id, name").eq("farm_id", a.id).order("name"),
     supabase.from("pastures").select("id, name").eq("farm_id", a.id).order("name"),
   ]);
@@ -58,87 +69,190 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Custos</h1>
-      {sp.ok && <div className="flash">Operação concluída.</div>}
+      <div className="head">
+        <div>
+          <h1 className="title" style={{ margin: 0 }}>Gestão Financeira: Custos & Despesas Operacionais</h1>
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
+            Apropriação de despesas por lote, pasto ou animal, e apuração de custo por cabeça
+          </p>
+        </div>
+      </div>
+
+      {sp.ok && <div className="flash">Lançamento financeiro concluído com sucesso.</div>}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
 
-      <form className="card filters" method="get">
-        <label>De<input type="date" name="de" defaultValue={de} /></label>
-        <label>Até<input type="date" name="ate" defaultValue={ate} /></label>
-        <button className="btn">Filtrar</button>
+      {/* Filtro de Período */}
+      <form className="card filters" method="get" style={{ padding: "16px 20px" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap", width: "100%" }}>
+          <label>Data Inicial<input type="date" name="de" defaultValue={de} /></label>
+          <label>Data Final<input type="date" name="ate" defaultValue={ate} /></label>
+          <button className="btn" style={{ height: 42 }}>Filtrar Período</button>
+        </div>
       </form>
 
+      {/* Grid de Resumo Financeiro */}
       <div className="grid">
-        <div className="card"><small className="muted">Total no período</small><div className="big">{money(s.total)}</div></div>
-        {(s.by_category as any[]).map((c) => (
-          <div className="card" key={c.category}><small className="muted">{CAT[c.category] ?? c.category}</small><div className="big">{money(c.amount)}</div></div>
+        <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Custo Total no Período</small>
+            <span style={{ fontSize: 18 }}>💳</span>
+          </div>
+          <div className="big" style={{ color: "var(--red)" }}>{money(s.total)}</div>
+          <small className="muted">Despesas operacionais acumuladas</small>
+        </div>
+
+        {(s.by_category as any[]).slice(0, 4).map((c) => (
+          <div className="card" key={c.category}>
+            <small className="muted">{CAT[c.category] ?? c.category}</small>
+            <div className="big">{money(c.amount)}</div>
+            <small className="muted">
+              {s.total > 0 ? `${Math.round((c.amount / s.total) * 100)}% do total` : "—"}
+            </small>
+          </div>
         ))}
       </div>
 
-      <div className="grid">
-        <div className="card" style={{ overflowX: "auto" }}>
-          <strong>Custo por lote</strong>
-          {(s.by_lot as any[]).length === 0 ? <p className="muted">Sem custos lançados em lotes.</p> : (
-            <table className="table"><thead><tr><th>Lote</th><th>Total</th><th>Animais ativos</th><th>Por cabeça</th></tr></thead>
-              <tbody>{(s.by_lot as any[]).map((l) => (
-                <tr key={l.lot}><td>{l.lot}</td><td>{money(l.amount)}</td><td>{l.heads}</td><td>{l.per_head == null ? "—" : money(l.per_head)}</td></tr>
-              ))}</tbody></table>
+      {/* Detalhamento por Lote e Pasto */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <strong>📦 Custo Apropriado por Lote</strong>
+            <span className="badge neutral">Por Cabeça</span>
+          </div>
+          {(s.by_lot as any[]).length === 0 ? (
+            <p className="muted" style={{ padding: "16px 0", textAlign: "center" }}>Sem custos diretos alocados a lotes no período.</p>
+          ) : (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Lote</th>
+                    <th>Total</th>
+                    <th>Animais</th>
+                    <th style={{ textAlign: "right" }}>R$ / Cabeça</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(s.by_lot as any[]).map((l) => (
+                    <tr key={l.lot}>
+                      <td><strong>{l.lot}</strong></td>
+                      <td>{money(l.amount)}</td>
+                      <td>{l.heads} cab.</td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>{l.per_head == null ? "—" : money(l.per_head)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          <p className="muted">Por cabeça = custo do lote ÷ animais ativos hoje no lote (aproximação).</p>
         </div>
-        <div className="card" style={{ overflowX: "auto" }}>
-          <strong>Custo por pasto</strong>
-          {(s.by_pasture as any[]).length === 0 ? <p className="muted">Sem custos lançados em pastos.</p> : (
-            <table className="table"><thead><tr><th>Pasto</th><th>Total</th></tr></thead>
-              <tbody>{(s.by_pasture as any[]).map((p) => <tr key={p.pasture}><td>{p.pasture}</td><td>{money(p.amount)}</td></tr>)}</tbody></table>
+
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <strong>🌱 Custo Apropriado por Pasto</strong>
+            <span className="badge neutral">Manejo de Solo & Pasto</span>
+          </div>
+          {(s.by_pasture as any[]).length === 0 ? (
+            <p className="muted" style={{ padding: "16px 0", textAlign: "center" }}>Sem custos alocados a pastos no período.</p>
+          ) : (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Pasto / Piquete</th>
+                    <th style={{ textAlign: "right" }}>Total Aplicado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(s.by_pasture as any[]).map((p) => (
+                    <tr key={p.pasture}>
+                      <td><strong>{p.pasture}</strong></td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>{money(p.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
+      {/* Lançamento de Novo Custo */}
       {canCreate && (
         <form action={createCost} className="card">
-          <strong>Lançar custo</strong>
-          <div className="form2" style={{ marginTop: 12 }}>
-            <label>Data<input name="date" type="date" defaultValue={today} max={today} required /></label>
-            <label>Descrição<input name="description" required /></label>
-            <label>Categoria
-              <select name="category" defaultValue="outros">{Object.entries(CAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+          <strong>+ Lançar Nova Despesa Operacional</strong>
+          <div className="form2" style={{ marginTop: 14 }}>
+            <label>Data de Competência *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Descrição do Custo *<input name="description" required placeholder="Ex: Compra de sal mineral proteinado 30kg" /></label>
+            <label>Categoria de Despesa
+              <select name="category" defaultValue="racao">
+                {Object.entries(CAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
             </label>
-            <label>Valor (R$)<input name="amount" inputMode="decimal" required /></label>
-            <label>Atribuir a
-              <select name="target_type" defaultValue="fazenda">{Object.entries(TARGET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <label>Valor Total (R$) *<input name="amount" inputMode="decimal" required placeholder="Ex: 3450.00" /></label>
+            <label>Centro de Custo / Alocação
+              <select name="target_type" defaultValue="lote">
+                {Object.entries(TARGET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
             </label>
-            <label>Lote (se atribuído a lote)
+            <label>Lote Alvo (se aplicável)
               <select name="lot_id" defaultValue=""><option value="">—</option>{(lots.data ?? []).map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
             </label>
-            <label>Pasto (se atribuído a pasto)
+            <label>Pasto Alvo (se aplicável)
               <select name="pasture_id" defaultValue=""><option value="">—</option>{(pastures.data ?? []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
             </label>
-            <label>Brinco (se atribuído a animal)<input name="ear_tag" /></label>
-            <label>Observações<input name="notes" /></label>
-            <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Lançar" message="Lançar este custo?" /></div>
+            <label>Brinco (se custo individual)<input name="ear_tag" placeholder="Brinco do animal" /></label>
+            <label style={{ gridColumn: "1 / -1" }}>Observações Adicionais<input name="notes" placeholder="Fornecedor, nota fiscal, etc." /></label>
+            <div style={{ alignSelf: "end", gridColumn: "1 / -1" }}>
+              <ConfirmSubmit className="btn" label="Lançar Despesa" message="Confirmar o lançamento financeiro?" />
+            </div>
           </div>
         </form>
       )}
 
+      {/* Livro Razão de Lançamentos */}
       <div className="card">
-        <strong>Lançamentos do período</strong>
-        {(list.data ?? []).length === 0 ? <p className="muted">Nenhum lançamento.</p> : (list.data as any[]).map((c) => (
-          <div className="row" key={c.id}>
-            <span>{fmtDate(c.cost_date)} · {c.description} <span className="muted">· {CAT[c.category]} · {TARGET[c.target_type]}{c.stock_movement_id ? " · gerado pelo estoque" : ""}</span></span>
-            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <strong>{money(c.amount)}</strong>
-              {canUpdate && !c.stock_movement_id && (
-                <form action={voidCost} style={{ display: "flex", gap: 8 }}>
-                  <input type="hidden" name="id" value={c.id} />
-                  <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo da anulação" style={{ width: 140 }} />
-                  <ConfirmSubmit label="Anular" message="Anular este custo?" />
-                </form>
-              )}
-            </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <strong>📋 Lançamentos do Período ({((list.data ?? []) as any[]).length})</strong>
+        </div>
+        {((list.data ?? []) as any[]).length === 0 ? (
+          <p className="muted" style={{ padding: "20px 0", textAlign: "center" }}>Nenhum custo lançado no período.</p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Alocação</th>
+                  <th style={{ textAlign: "right" }}>Valor</th>
+                  <th style={{ textAlign: "right" }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {((list.data ?? []) as any[]).map((c) => (
+                  <tr key={c.id}>
+                    <td>{fmtDate(c.cost_date)}</td>
+                    <td><strong>{c.description}</strong></td>
+                    <td><span className="badge neutral">{CAT[c.category] ?? c.category}</span></td>
+                    <td><span className="muted">{TARGET[c.target_type]}</span></td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--red)" }}>{money(c.amount)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {canUpdate && !c.stock_movement_id && (
+                        <form action={voidCost} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo anulação" style={{ width: 120, padding: "5px 8px", fontSize: 12.5 }} />
+                          <ConfirmSubmit className="btn ghost" label="Anular" message="Anular este lançamento de custo?" />
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-        <p className="muted">Custos gerados por saída de estoque são anulados anulando a movimentação de estoque. TODO: contas a pagar e a receber.</p>
+        )}
       </div>
     </AppShell>
   );

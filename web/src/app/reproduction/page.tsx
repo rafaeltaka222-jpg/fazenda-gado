@@ -8,12 +8,15 @@ import { registerBirthAction, registerEvent, voidReproduction } from "./actions"
 
 export const instant = false;
 
-const ST: Record<string, string> = { sem_registro: "sem registro", servida: "servida", prenha: "prenha", vazia: "vazia", parida: "parida" };
+const ST: Record<string, string> = { sem_registro: "Sem registro", servida: "Servida", prenha: "Prenha", vazia: "Vazia", parida: "Parida" };
 const TYPE: Record<string, string> = { cobertura: "Cobertura", inseminacao: "Inseminação", diagnostico: "Diagnóstico", parto: "Parto", aborto: "Aborto" };
 const ERR: Record<string, string> = {
-  femea: "Fêmea não encontrada entre os animais ativos (confira o brinco e o sexo).", macho: "Reprodutor não encontrado ou não é macho.",
-  brinco: "Já existe um animal com o brinco do bezerro.", bezerro: "Este parto gerou um bezerro cadastrado e não pode ser anulado.",
-  perm: "Você não tem permissão para esta operação.", falha: "Não foi possível registrar. Confira a data (não pode ser futura) e os campos obrigatórios.",
+  femea: "Fêmea não encontrada entre os animais ativos (confira o brinco e o sexo).",
+  macho: "Reprodutor não encontrado ou não é macho.",
+  brinco: "Já existe um animal com o brinco do bezerro.",
+  bezerro: "Este parto gerou um bezerro cadastrado e não pode ser anulado.",
+  perm: "Você não tem permissão para esta operação.",
+  falha: "Não foi possível registrar. Confira a data (não pode ser futura) e os campos obrigatórios.",
 };
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—");
 
@@ -30,7 +33,7 @@ export default async function ReproductionPage({
   if (!a) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Reprodução</h1>
+        <h1 className="title">Central de Reprodução & IATF</h1>
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
@@ -40,7 +43,7 @@ export default async function ReproductionPage({
   if (!perms.includes("reproduction.view")) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Reprodução</h1>
+        <h1 className="title">Central de Reprodução & IATF</h1>
         <div className="card"><p className="muted">Seu perfil não tem permissão para ver a reprodução.</p></div>
       </AppShell>
     );
@@ -53,7 +56,7 @@ export default async function ReproductionPage({
     supabase.rpc("reproduction_alerts", { p_farm: a.id }),
     supabase.rpc("reproduction_status", { p_farm: a.id }),
     supabase.from("reproduction_events").select("id, female_id, male_id, event_type, event_date, result, calf_id")
-      .eq("farm_id", a.id).is("voided_at", null).order("created_at", { ascending: false }).limit(12),
+      .eq("farm_id", a.id).is("voided_at", null).order("created_at", { ascending: false }).limit(15),
   ]);
   const alerts: any = al.data ?? {};
   const females = ((stat.data ?? []) as any[]).filter((f) => !filter || f.status === filter).slice(0, 200);
@@ -63,109 +66,265 @@ export default async function ReproductionPage({
   if (ids.length) ((await supabase.from("animals").select("id, ear_tag").in("id", ids)).data ?? []).forEach((x: any) => tag.set(x.id, x.ear_tag));
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Bahia" });
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "prenha": return "badge";
+      case "servida": return "badge blue";
+      case "parida": return "badge amber";
+      case "vazia": return "badge red";
+      default: return "badge neutral";
+    }
+  };
+
   return (
     <AppShell {...shell}>
-      <h1 className="title">Reprodução</h1>
-      {sp.ok && <div className="flash">Registrado.</div>}
+      <div className="head">
+        <div>
+          <h1 className="title" style={{ margin: 0 }}>Central de Reprodução & IATF</h1>
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
+            Controle de coberturas, inseminações, diagnóstico de gestação e partos
+          </p>
+        </div>
+      </div>
+
+      {sp.ok && <div className="flash">Evento reprodutivo registrado com sucesso.</div>}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
 
+      {/* Grid de Métricas Reprodutivas */}
       <div className="grid">
-        <div className="card"><small className="muted">Servidas</small><div className="big">{alerts.servida ?? 0}</div></div>
-        <div className="card"><small className="muted">Prenhas</small><div className="big">{alerts.prenha ?? 0}</div></div>
-        <div className="card"><small className="muted">Partos previstos em 30 dias</small><div className="big">{alerts.calving_30d ?? 0}</div></div>
-        <div className="card"><small className="muted">Partos atrasados</small><div className="big">{alerts.overdue_calving ?? 0}</div></div>
-        <div className="card"><small className="muted">Diagnóstico pendente (+45 dias)</small><div className="big">{alerts.diagnosis_pending ?? 0}</div></div>
-        <div className="card"><small className="muted">Nascimentos em 30 dias</small><div className="big">{alerts.births_30d ?? 0}</div></div>
+        <div className="card" style={{ borderLeft: "4px solid #0284c7" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Fêmeas Servidas</small>
+            <span style={{ fontSize: 18 }}>🐂</span>
+          </div>
+          <div className="big" style={{ color: "#0284c7" }}>{alerts.servida ?? 0}</div>
+          <small className="muted">Aguardando diagnóstico</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #059669" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Prenhas Confirmadas</small>
+            <span style={{ fontSize: 18 }}>✨</span>
+          </div>
+          <div className="big" style={{ color: "var(--brand)" }}>{alerts.prenha ?? 0}</div>
+          <small className="muted">Gestação ativa</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Partos Próx. 30 Dias</small>
+            <span style={{ fontSize: 18 }}>🍼</span>
+          </div>
+          <div className="big" style={{ color: "var(--amber)" }}>{alerts.calving_30d ?? 0}</div>
+          <small className="muted">Atenção ao piquete maternidade</small>
+        </div>
+
+        <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Partos Atrasados</small>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+          </div>
+          <div className="big" style={{ color: alerts.overdue_calving > 0 ? "var(--red)" : "var(--ink)" }}>{alerts.overdue_calving ?? 0}</div>
+          <small className="muted">+283 dias pós-cobertura</small>
+        </div>
+
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Diag. Pendente (+45d)</small>
+            <span style={{ fontSize: 18 }}>🔬</span>
+          </div>
+          <div className="big">{alerts.diagnosis_pending ?? 0}</div>
+          <small className="muted">Prontas para toque/US</small>
+        </div>
+
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <small className="muted">Bezerros Nascidos (30d)</small>
+            <span style={{ fontSize: 18 }}>🌱</span>
+          </div>
+          <div className="big">{alerts.births_30d ?? 0}</div>
+          <small className="muted">Nascimentos recentes</small>
+        </div>
       </div>
 
-      <form className="card filters" method="get">
-        <label>Situação
-          <select name="st" defaultValue={filter}>
-            <option value="">Todas</option>
-            {Object.entries(ST).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
-        <button className="btn">Filtrar</button>
-      </form>
+      {/* Pílulas de Filtro Interativo */}
+      <div className="card" style={{ padding: "14px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-secondary)" }}>Filtrar por Situação:</span>
+          <div className="pill-group">
+            <Link href="/reproduction" className={`filter-pill ${filter === "" ? "active" : ""}`}>
+              Todas as Matrizes
+            </Link>
+            {Object.entries(ST).map(([k, v]) => (
+              <Link key={k} href={`/reproduction?st=${k}`} className={`filter-pill ${filter === k ? "active" : ""}`}>
+                {v}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
 
-      <div className="card" style={{ overflowX: "auto" }}>
-        <strong>Fêmeas ativas</strong>
-        {females.length === 0 ? <p className="muted">Nenhuma fêmea encontrada.</p> : (
-          <table className="table" style={{ marginTop: 8 }}>
-            <thead><tr><th>Brinco</th><th>Situação</th><th>Último evento</th><th>Parto previsto</th></tr></thead>
-            <tbody>{females.map((f) => (
-              <tr key={f.animal_id}>
-                <td><Link href={`/herd/${f.animal_id}`} style={{ color: "var(--green)", fontWeight: 600 }}>{f.ear_tag}</Link></td>
-                <td><span className="badge">{ST[f.status]}</span></td><td>{fmtDate(f.last_event_date)}</td><td>{fmtDate(f.expected_calving)}</td>
-              </tr>
-            ))}</tbody>
-          </table>
+      {/* Tabela de Fêmeas Ativas */}
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <strong>🐄 Matrizes & Fêmeas em Reprodução ({females.length})</strong>
+          <small className="muted">Previsão média de gestação: 283 dias</small>
+        </div>
+        {females.length === 0 ? (
+          <p className="muted" style={{ padding: "20px 0", textAlign: "center" }}>Nenhuma matriz encontrada para este filtro.</p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Identificação / Brinco</th>
+                  <th>Situação Reprodutiva</th>
+                  <th>Último Evento</th>
+                  <th>Previsão de Parto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {females.map((f) => (
+                  <tr key={f.animal_id}>
+                    <td>
+                      <Link href={`/herd/${f.animal_id}`} style={{ color: "var(--brand)", fontWeight: 700 }}>
+                        Brinco #{f.ear_tag}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className={getStatusBadgeClass(f.status)}>
+                        {ST[f.status] ?? f.status}
+                      </span>
+                    </td>
+                    <td>{fmtDate(f.last_event_date)}</td>
+                    <td>
+                      {f.expected_calving ? (
+                        <span style={{ fontWeight: 600, color: f.status === "prenha" ? "var(--brand)" : "inherit" }}>
+                          {fmtDate(f.expected_calving)}
+                        </span>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-        <p className="muted">Parto previsto = última cobertura/inseminação + 283 dias (estimativa média para bovinos).</p>
       </div>
 
+      {/* Ações Reprodutivas */}
       {canCreate && (
-        <>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 18 }}>
+          {/* Lançamento de Cobertura / IA / DG */}
           <form action={registerEvent} className="card">
-            <strong>Registrar cobertura, inseminação, diagnóstico ou aborto</strong>
+            <strong>📋 Registrar Cobertura, Inseminação ou Diagnóstico</strong>
             <input type="hidden" name="back" value="/reproduction" />
-            <div className="form2" style={{ marginTop: 12 }}>
-              <label>Brinco da fêmea<input name="female_tag" required /></label>
-              <label>Evento
+            <div className="form2" style={{ marginTop: 14 }}>
+              <label>Brinco da Fêmea *<input name="female_tag" required placeholder="Ex: 000105" /></label>
+              <label>Tipo de Evento *
                 <select name="type" defaultValue="cobertura">
-                  <option value="cobertura">Cobertura (monta natural)</option><option value="inseminacao">Inseminação</option>
-                  <option value="diagnostico">Diagnóstico de gestação</option><option value="aborto">Aborto</option>
+                  <option value="cobertura">Cobertura (Monta Natural)</option>
+                  <option value="inseminacao">Inseminação Artificial (IA / IATF)</option>
+                  <option value="diagnostico">Diagnóstico de Gestação (DG)</option>
+                  <option value="aborto">Registro de Aborto</option>
                 </select>
               </label>
-              <label>Data<input name="date" type="date" defaultValue={today} max={today} required /></label>
-              <label>Brinco do reprodutor (cobertura)<input name="male_tag" /></label>
-              <label>Sêmen/touro da IA<input name="semen" /></label>
-              <label>Resultado (diagnóstico)
-                <select name="result" defaultValue=""><option value="">—</option><option value="positivo">Positivo (prenha)</option><option value="negativo">Negativo (vazia)</option></select>
+              <label>Data do Evento *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+              <label>Touro / Reprodutor (Monta)<input name="male_tag" placeholder="Brinco do touro" /></label>
+              <label>Partida de Sêmen / Touro da IA<input name="semen" placeholder="Nome do touro da palheta" /></label>
+              <label>Resultado (apenas p/ Diagnóstico)
+                <select name="result" defaultValue="">
+                  <option value="">—</option>
+                  <option value="positivo">Positivo (Prenha)</option>
+                  <option value="negativo">Negativo (Vazia)</option>
+                </select>
               </label>
-              <label>Observações<input name="notes" /></label>
-              <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Registrar" message="Registrar este evento reprodutivo?" /></div>
+              <label>Observações Adicionais<input name="notes" placeholder="Detalhes do procedimento" /></label>
+              <div style={{ alignSelf: "end" }}>
+                <ConfirmSubmit className="btn" label="Registrar Evento" message="Confirmar o registro do evento reprodutivo?" />
+              </div>
             </div>
           </form>
+
+          {/* Lançamento de Parto com Criação Automática do Bezerro */}
           <form action={registerBirthAction} className="card">
-            <strong>Registrar parto (cria o bezerro)</strong>
+            <strong>🍼 Registrar Parto & Cadastro do Bezerro</strong>
+            <p className="muted" style={{ margin: "4px 0 14px", fontSize: 13 }}>
+              Cria automaticamente o cadastro do bezerro no rebanho com vínculo genealógico completo.
+            </p>
             <input type="hidden" name="back" value="/reproduction" />
-            <div className="form2" style={{ marginTop: 12 }}>
-              <label>Brinco da mãe<input name="dam_tag" required /></label>
-              <label>Data do parto<input name="date" type="date" defaultValue={today} max={today} required /></label>
-              <label>Resultado
-                <select name="outcome" defaultValue="vivo"><option value="vivo">Bezerro vivo</option><option value="natimorto">Natimorto</option></select>
+            <div className="form2">
+              <label>Brinco da Matriz (Mãe) *<input name="dam_tag" required placeholder="Ex: 000105" /></label>
+              <label>Data do Parto *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+              <label>Resultado do Parto
+                <select name="outcome" defaultValue="vivo">
+                  <option value="vivo">Bezerro Nascido Vivo</option>
+                  <option value="natimorto">Natimorto</option>
+                </select>
               </label>
-              <label>Brinco do bezerro<input name="calf_tag" /></label>
-              <label>Sexo do bezerro
-                <select name="calf_sex" defaultValue="F"><option value="F">Fêmea</option><option value="M">Macho</option></select>
+              <label>Brinco do Bezerro<input name="calf_tag" placeholder="Ex: 000201" /></label>
+              <label>Sexo do Bezerro
+                <select name="calf_sex" defaultValue="F">
+                  <option value="F">Fêmea ♀</option>
+                  <option value="M">Macho ♂</option>
+                </select>
               </label>
-              <label>Brinco do pai (vazio = último reprodutor da cobertura)<input name="sire_tag" /></label>
-              <label>Observações<input name="notes" /></label>
-              <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Registrar parto" message="Registrar o parto? O bezerro é cadastrado com a mãe e o pai." /></div>
+              <label>Brinco do Pai (opcional)<input name="sire_tag" placeholder="Vazio = herda da cobertura" /></label>
+              <label>Observações do Parto<input name="notes" placeholder="Peso ao nascer, vigor, etc." /></label>
+              <div style={{ alignSelf: "end" }}>
+                <ConfirmSubmit className="btn" label="Registrar Parto" message="Registrar o parto? O bezerro será inserido automaticamente no rebanho." />
+              </div>
             </div>
           </form>
-        </>
+        </div>
       )}
 
+      {/* Histórico Recente de Eventos */}
       <div className="card">
-        <strong>Últimos eventos</strong>
-        {events.length === 0 ? <p className="muted">Nenhum evento registrado.</p> : events.map((e) => (
-          <div className="row" key={e.id}>
-            <span>
-              {fmtDate(e.event_date)} · <strong>{TYPE[e.event_type]}</strong> · {tag.get(e.female_id) ?? "—"}
-              {e.male_id ? <span className="muted"> × {tag.get(e.male_id) ?? "—"}</span> : null}
-              {e.result ? <span className="muted"> · {e.result}</span> : null}
-            </span>
-            {canUpdate && !e.calf_id && (
-              <form action={voidReproduction} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="hidden" name="id" value={e.id} /><input type="hidden" name="back" value="/reproduction" />
-                <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo da anulação" style={{ width: 150 }} />
-                <ConfirmSubmit label="Anular" message="Anular este evento?" />
-              </form>
-            )}
+        <strong>📋 Últimos Eventos Reprodutivos Registrados</strong>
+        {events.length === 0 ? (
+          <p className="muted" style={{ marginTop: 8 }}>Nenhum evento recente registrado.</p>
+        ) : (
+          <div className="table-container" style={{ marginTop: 12 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Evento</th>
+                  <th>Matriz</th>
+                  <th>Reprodutor / Sêmen</th>
+                  <th>Resultado</th>
+                  <th style={{ textAlign: "right" }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((e) => (
+                  <tr key={e.id}>
+                    <td>{fmtDate(e.event_date)}</td>
+                    <td><strong>{TYPE[e.event_type] ?? e.event_type}</strong></td>
+                    <td>
+                      <Link href={`/herd/${e.female_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
+                        #{tag.get(e.female_id) ?? "—"}
+                      </Link>
+                    </td>
+                    <td>{e.male_id ? `#${tag.get(e.male_id) ?? "—"}` : "—"}</td>
+                    <td>{e.result ? <span className="badge">{e.result}</span> : "—"}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {canUpdate && !e.calf_id && (
+                        <form action={voidReproduction} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                          <input type="hidden" name="id" value={e.id} />
+                          <input type="hidden" name="back" value="/reproduction" />
+                          <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo anulação" style={{ width: 110, padding: "5px 8px", fontSize: 12.5 }} />
+                          <ConfirmSubmit className="btn ghost" label="Anular" message="Anular este evento reprodutivo?" />
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        )}
       </div>
     </AppShell>
   );
