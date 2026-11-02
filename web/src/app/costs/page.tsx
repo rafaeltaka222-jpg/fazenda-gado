@@ -95,7 +95,10 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
         <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Custo Total no Período</small>
-            <span style={{ fontSize: 18 }}>💳</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--red)" }}>{money(s.total)}</div>
           <small className="muted">Despesas operacionais acumuladas</small>
@@ -116,7 +119,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <strong>📦 Custo Apropriado por Lote</strong>
+            <strong>Custo Apropriado por Lote</strong>
             <span className="badge neutral">Por Cabeça</span>
           </div>
           {(s.by_lot as any[]).length === 0 ? (
@@ -149,7 +152,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
 
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <strong>🌱 Custo Apropriado por Pasto</strong>
+            <strong>Custo Apropriado por Pasto</strong>
             <span className="badge neutral">Manejo de Solo & Pasto</span>
           </div>
           {(s.by_pasture as any[]).length === 0 ? (
@@ -213,7 +216,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
       {/* Livro Razão de Lançamentos */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>📋 Lançamentos do Período ({((list.data ?? []) as any[]).length})</strong>
+          <strong>Lançamentos do Período ({((list.data ?? []) as any[]).length})</strong>
         </div>
         {((list.data ?? []) as any[]).length === 0 ? (
           <p className="muted" style={{ padding: "20px 0", textAlign: "center" }}>Nenhum custo lançado no período.</p>

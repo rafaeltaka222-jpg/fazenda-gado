@@ -95,7 +95,9 @@ export default async function ReproductionPage({
         <div className="card" style={{ borderLeft: "4px solid #0284c7" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Fêmeas Servidas</small>
-            <span style={{ fontSize: 18 }}>🐂</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
           </div>
           <div className="big" style={{ color: "#0284c7" }}>{alerts.servida ?? 0}</div>
           <small className="muted">Aguardando diagnóstico</small>
@@ -104,7 +106,9 @@ export default async function ReproductionPage({
         <div className="card" style={{ borderLeft: "4px solid #059669" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Prenhas Confirmadas</small>
-            <span style={{ fontSize: 18 }}>✨</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--brand)" }}>{alerts.prenha ?? 0}</div>
           <small className="muted">Gestação ativa</small>
@@ -113,7 +117,12 @@ export default async function ReproductionPage({
         <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Partos Próx. 30 Dias</small>
-            <span style={{ fontSize: 18 }}>🍼</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--amber)" }}>{alerts.calving_30d ?? 0}</div>
           <small className="muted">Atenção ao piquete maternidade</small>
@@ -122,7 +131,9 @@ export default async function ReproductionPage({
         <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Partos Atrasados</small>
-            <span style={{ fontSize: 18 }}>⚠️</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
           <div className="big" style={{ color: alerts.overdue_calving > 0 ? "var(--red)" : "var(--ink)" }}>{alerts.overdue_calving ?? 0}</div>
           <small className="muted">+283 dias pós-cobertura</small>
@@ -131,7 +142,11 @@ export default async function ReproductionPage({
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Diag. Pendente (+45d)</small>
-            <span style={{ fontSize: 18 }}>🔬</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
           </div>
           <div className="big">{alerts.diagnosis_pending ?? 0}</div>
           <small className="muted">Prontas para toque/US</small>
@@ -140,7 +155,9 @@ export default async function ReproductionPage({
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Bezerros Nascidos (30d)</small>
-            <span style={{ fontSize: 18 }}>🌱</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
           <div className="big">{alerts.births_30d ?? 0}</div>
           <small className="muted">Nascimentos recentes</small>
@@ -167,7 +184,7 @@ export default async function ReproductionPage({
       {/* Tabela de Fêmeas Ativas */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>🐄 Matrizes & Fêmeas em Reprodução ({females.length})</strong>
+          <strong>Matrizes & Fêmeas em Reprodução ({females.length})</strong>
           <small className="muted">Previsão média de gestação: 283 dias</small>
         </div>
         {females.length === 0 ? (
@@ -217,7 +234,7 @@ export default async function ReproductionPage({
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 18 }}>
           {/* Lançamento de Cobertura / IA / DG */}
           <form action={registerEvent} className="card">
-            <strong>📋 Registrar Cobertura, Inseminação ou Diagnóstico</strong>
+            <strong>Registrar Cobertura, Inseminação ou Diagnóstico</strong>
             <input type="hidden" name="back" value="/reproduction" />
             <div className="form2" style={{ marginTop: 14 }}>
               <label>Brinco da Fêmea *<input name="female_tag" required placeholder="Ex: 000105" /></label>
@@ -248,7 +265,7 @@ export default async function ReproductionPage({
 
           {/* Lançamento de Parto com Criação Automática do Bezerro */}
           <form action={registerBirthAction} className="card">
-            <strong>🍼 Registrar Parto & Cadastro do Bezerro</strong>
+            <strong>Registrar Parto & Cadastro do Bezerro</strong>
             <p className="muted" style={{ margin: "4px 0 14px", fontSize: 13 }}>
               Cria automaticamente o cadastro do bezerro no rebanho com vínculo genealógico completo.
             </p>
@@ -265,8 +282,8 @@ export default async function ReproductionPage({
               <label>Brinco do Bezerro<input name="calf_tag" placeholder="Ex: 000201" /></label>
               <label>Sexo do Bezerro
                 <select name="calf_sex" defaultValue="F">
-                  <option value="F">Fêmea ♀</option>
-                  <option value="M">Macho ♂</option>
+                  <option value="F">Fêmea</option>
+                  <option value="M">Macho</option>
                 </select>
               </label>
               <label>Brinco do Pai (opcional)<input name="sire_tag" placeholder="Vazio = herda da cobertura" /></label>
@@ -281,7 +298,7 @@ export default async function ReproductionPage({
 
       {/* Histórico Recente de Eventos */}
       <div className="card">
-        <strong>📋 Últimos Eventos Reprodutivos Registrados</strong>
+        <strong>Últimos Eventos Reprodutivos Registrados</strong>
         {events.length === 0 ? (
           <p className="muted" style={{ marginTop: 8 }}>Nenhum evento recente registrado.</p>
         ) : (

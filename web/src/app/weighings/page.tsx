@@ -63,16 +63,19 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
           </p>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <Link href="/import" className="btn ghost" style={{ gap: 6 }}>
-            <span>📥</span> Importar da Balança (TXT/CSV)
+          <Link href="/import" className="btn ghost" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Importar da Balança (TXT/CSV)</span>
           </Link>
         </div>
       </div>
 
-      {sp.ok && <div className="flash">✓ {sp.ok} pesagem(ns) registrada(s) com sucesso no histórico.</div>}
+      {sp.ok && <div className="flash">Operação concluída: {sp.ok} pesagem(ns) registrada(s) com sucesso.</div>}
       {Number(sp.av) > 0 && (
         <div className="flash bad" role="alert">
-          ⚠️ Atenção: {sp.av} pesagem(ns) com variação brusca em relação à pesagem anterior. Confira os valores lançados.
+          Atenção: {sp.av} pesagem(ns) com variação brusca em relação à pesagem anterior. Confira os valores lançados.
         </div>
       )}
       {sp.erro === "dup" && (
@@ -187,7 +190,7 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, flexWrap: "wrap", gap: 14 }}>
           <p className="muted" style={{ margin: 0, fontSize: 13, maxWidth: 600 }}>
-            💡 Dica de campo: preencha apenas os animais que subiram na balança. As linhas vazias são ignoradas e não afetam o histórico anterior.
+            Observação de manejo: preencha apenas os animais que subiram na balança. As linhas vazias são ignoradas e não afetam o histórico anterior.
           </p>
           {rows.length > 0 && (
             <ConfirmButton

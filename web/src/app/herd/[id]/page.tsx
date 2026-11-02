@@ -145,7 +145,7 @@ export default async function AnimalPage({
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <span className="dossier-tag">Brinco #{an.ear_tag}</span>
               <span className={`badge ${an.sex === "M" ? "tag-male" : "tag-female"}`}>
-                {an.sex === "M" ? "♂ Macho" : "♀ Fêmea"}
+                {an.sex === "M" ? "Macho" : "Fêmea"}
               </span>
               <span className={`badge ${an.status === "ativo" ? "" : an.status === "vendido" ? "blue" : "neutral"}`}>
                 {an.status}
@@ -167,7 +167,9 @@ export default async function AnimalPage({
       {/* Alerta de Carência Sanitária */}
       {activeWithdrawal && (
         <div className="flash bad" role="alert" style={{ borderLeft: "5px solid #dc2626" }}>
-          <span style={{ fontSize: 20 }}>⚠️</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           <div>
             <strong>Animal em Período de Carência Sanitária!</strong>
             <p style={{ margin: "2px 0 0", fontSize: 13.5 }}>
@@ -234,7 +236,7 @@ export default async function AnimalPage({
       {/* Seção 1: Pesagens e Curva Ponderal */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <strong>⚖️ Histórico de Pesagens ({wAct.length})</strong>
+          <strong>Histórico de Pesagens ({wAct.length})</strong>
         </div>
         {wAll.length === 0 ? (
           <p className="muted">Nenhuma pesagem registrada até o momento.</p>
@@ -292,7 +294,7 @@ export default async function AnimalPage({
 
       {/* Seção 2: Sanidade e Medicamentos */}
       <div className="card">
-        <strong>💉 Histórico Sanitário e Vacinas</strong>
+        <strong>Histórico Sanitário e Vacinas</strong>
         {hEvents.length === 0 ? (
           <p className="muted" style={{ marginTop: 8 }}>Nenhuma aplicação ou vacina registrada para este animal.</p>
         ) : (
@@ -362,7 +364,7 @@ export default async function AnimalPage({
 
       {/* Seção 3: Genealogia e Descendentes */}
       <div className="card">
-        <strong>🧬 Genealogia e Família</strong>
+        <strong>Genealogia e Família</strong>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 12 }}>
           <div style={{ padding: 14, background: "var(--bg-subtle)", borderRadius: 12, border: "1px solid var(--line)" }}>
             <span className="muted" style={{ fontSize: 12 }}>PAI / REPRODUTOR</span>
@@ -381,7 +383,7 @@ export default async function AnimalPage({
             <div style={{ marginTop: 4, fontSize: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
               {kids.length === 0 ? <span className="muted">Nenhum bezerro</span> : kids.map((k) => (
                 <Link key={k.id} href={`/herd/${k.id}`} className="badge" style={{ textDecoration: "none" }}>
-                  #{k.ear_tag} ({k.sex === "M" ? "♂" : "♀"})
+                  #{k.ear_tag} ({k.sex === "M" ? "Macho" : "Fêmea"})
                 </Link>
               ))}
             </div>
@@ -392,7 +394,7 @@ export default async function AnimalPage({
       {/* Seção 4: Reprodução (Apenas Fêmeas) */}
       {an.sex === "F" && (
         <div className="card">
-          <strong>🐄 Eventos Reprodutivos</strong>
+          <strong>Eventos Reprodutivos</strong>
           {repro.length === 0 ? <p className="muted" style={{ marginTop: 8 }}>Nenhum evento reprodutivo registrado.</p> : (
             <div className="table-container" style={{ marginTop: 12 }}>
               <table className="table">
@@ -425,7 +427,7 @@ export default async function AnimalPage({
 
       {/* Seção 5: Histórico de Movimentações */}
       <div className="card">
-        <strong>📍 Histórico de Manejo e Movimentações</strong>
+        <strong>Histórico de Manejo e Movimentações</strong>
         {(eventsRes.data ?? []).length === 0 ? (
           <p className="muted" style={{ marginTop: 8 }}>Sem histórico registrado.</p>
         ) : (
@@ -446,7 +448,7 @@ export default async function AnimalPage({
       {/* Seção 6: Movimentação Rápida */}
       {an.status === "ativo" && (
         <form action={moveAnimals} className="card">
-          <strong>🔄 Movimentar Este Animal</strong>
+          <strong>Movimentar Este Animal</strong>
           <input type="hidden" name="ids" value={an.id} />
           <input type="hidden" name="back" value={`/herd/${an.id}`} />
           <div className="form2" style={{ marginTop: 12 }}>
@@ -476,7 +478,7 @@ export default async function AnimalPage({
 
       {/* Seção 7: Edição Cadastral e Campos Personalizados */}
       <form action={updateAnimal} className="card">
-        <strong>📋 Dados Cadastrais & Registro SISBOV</strong>
+        <strong>Dados Cadastrais & Registro SISBOV</strong>
         <input type="hidden" name="id" value={an.id} />
         <input type="hidden" name="version" value={an.version} />
         <div className="form2" style={{ marginTop: 14 }}>

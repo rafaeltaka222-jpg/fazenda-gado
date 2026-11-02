@@ -88,7 +88,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div className="card" style={{ borderLeft: "4px solid #059669" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Faturamento no Período</small>
-            <span style={{ fontSize: 18 }}>💰</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--brand)" }}>{money(s.total)}</div>
           <small className="muted">{s.sales} operação(ões) registrada(s)</small>
@@ -97,7 +99,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div className="card" style={{ borderLeft: "4px solid #0284c7" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Animais Comercializados</small>
-            <span style={{ fontSize: 18 }}>🐂</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
           </div>
           <div className="big" style={{ color: "#0284c7" }}>{s.animals} <span style={{ fontSize: 16 }}>cab.</span></div>
           <small className="muted">Baixas automáticas no rebanho</small>
@@ -106,7 +110,10 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Valor Médio por Cabeça</small>
-            <span style={{ fontSize: 18 }}>📈</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--amber)" }}>{s.avg_per_head == null ? "—" : money(s.avg_per_head)}</div>
           <small className="muted">Preço médio de desinvestimento</small>
@@ -117,7 +124,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       {canCreate && (
         <form action={createSale} className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <strong>📝 Registrar Nova Venda Comercial</strong>
+            <strong>Registrar Nova Venda Comercial</strong>
             <span className="badge amber">Operação Irreversível</span>
           </div>
           <div className="form2">
@@ -145,7 +152,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       {/* Histórico de Vendas */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>📋 Livro de Vendas do Período ({rows.length})</strong>
+          <strong>Livro de Vendas do Período ({rows.length})</strong>
           <span className="badge neutral">Rastreabilidade Comercial</span>
         </div>
         {rows.length === 0 ? (

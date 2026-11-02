@@ -82,7 +82,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
       {/* Seção 1: Pastos e Lotação */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <strong>🌱 Pastos & Piquetes de Pastejo ({pastures.length})</strong>
+          <strong>Pastos & Piquetes de Pastejo ({pastures.length})</strong>
           <span className="badge neutral">Manejo Rotacionado</span>
         </div>
 
@@ -153,7 +153,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
       {/* Seção 2: Lotes de Manejo */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <strong>📦 Lotes de Manejo do Rebanho ({lots.length})</strong>
+          <strong>Lotes de Manejo do Rebanho ({lots.length})</strong>
           <span className="badge neutral">Agrupamento Operacional</span>
         </div>
 

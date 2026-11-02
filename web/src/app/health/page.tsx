@@ -89,7 +89,9 @@ export default async function HealthPage({
         <div className="card" style={{ borderLeft: "4px solid #dc2626" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Doses Atrasadas</small>
-            <span style={{ fontSize: 18 }}>🚨</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
           <div className="big" style={{ color: al.overdue > 0 ? "var(--red)" : "var(--ink)" }}>{al.overdue}</div>
           <small className="muted">Exigem atenção imediata</small>
@@ -98,7 +100,12 @@ export default async function HealthPage({
         <div className="card" style={{ borderLeft: "4px solid #d97706" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">A Vencer (Próximos 30d)</small>
-            <span style={{ fontSize: 18 }}>📅</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
           </div>
           <div className="big" style={{ color: al.upcoming > 0 ? "var(--amber)" : "var(--ink)" }}>{al.upcoming}</div>
           <small className="muted">Planejamento sanitário</small>
@@ -107,7 +114,10 @@ export default async function HealthPage({
         <div className="card" style={{ borderLeft: "4px solid #059669" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <small className="muted">Animais em Carência</small>
-            <span style={{ fontSize: 18 }}>⏳</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
           </div>
           <div className="big" style={{ color: "var(--brand)" }}>{al.in_withdrawal}</div>
           <small className="muted">Retenção de abate/venda</small>
@@ -117,7 +127,7 @@ export default async function HealthPage({
       {/* Próximas Doses & Alertas */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>🗓️ Próximas Aplicações & Vacinas Agendadas</strong>
+          <strong>Próximas Aplicações & Vacinas Agendadas</strong>
           <span className="badge neutral">{(al.items ?? []).length} pendência(s)</span>
         </div>
         {(al.items ?? []).length === 0 ? (
@@ -161,7 +171,7 @@ export default async function HealthPage({
       {/* Formulário de Aplicação em Lote */}
       {canCreate && (
         <form action={registerHealth} className="card">
-          <strong>💉 Lançar Aplicação Sanitária (Individual ou por Lote)</strong>
+          <strong>Lançar Aplicação Sanitária (Individual ou por Lote)</strong>
           <p className="muted" style={{ margin: "4px 0 16px", fontSize: 13.5 }}>
             Registre vacinas, vermífugos ou medicamentos. O sistema calcula a carência e atualiza a ficha de cada animal.
           </p>
@@ -202,7 +212,7 @@ export default async function HealthPage({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
         {/* Histórico Recente */}
         <div className="card">
-          <strong>📋 Histórico Recente de Aplicações</strong>
+          <strong>Histórico Recente de Aplicações</strong>
           {recentRows.length === 0 ? (
             <p className="muted" style={{ marginTop: 8 }}>Nenhuma aplicação recente registrada.</p>
           ) : (
@@ -235,7 +245,7 @@ export default async function HealthPage({
 
         {/* Catálogo de Produtos e Cadastro */}
         <div className="card">
-          <strong>📦 Catálogo de Produtos Sanitários</strong>
+          <strong>Catálogo de Produtos Sanitários</strong>
           <div className="table-container" style={{ marginTop: 12 }}>
             <table className="table">
               <thead>

@@ -129,8 +129,13 @@ export default function LoginPage() {
           </form>
 
           {msg && (
-            <div className="flash bad" style={{ marginTop: 16, fontSize: 13.5 }}>
-              <span>⚠️</span> {msg}
+            <div className="flash bad" style={{ marginTop: 16, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{msg}</span>
             </div>
           )}
 
@@ -257,8 +262,13 @@ export default function LoginPage() {
           </form>
 
           {msg && (
-            <div className="flash bad" style={{ marginTop: 18, fontSize: 13.5 }}>
-              <span>⚠️</span> {msg}
+            <div className="flash bad" style={{ marginTop: 18, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{msg}</span>
             </div>
           )}
 
@@ -274,14 +284,17 @@ export default function LoginPage() {
 
         {/* Feature Pills */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 24, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
-            <span>✓</span> Rastreabilidade SISBOV
+          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            Rastreabilidade SISBOV
           </span>
-          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
-            <span>✓</span> Balança & GMD
+          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            Balança & GMD
           </span>
-          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
-            <span>✓</span> Trânsito & GTA
+          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            Trânsito & GTA
           </span>
         </div>
       </div>

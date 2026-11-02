@@ -110,7 +110,7 @@ export default async function HerdPage({
         </div>
       </div>
 
-      {sp.ok && <div className="flash">✓ Operação concluída com sucesso para {sp.ok} animal(is).</div>}
+      {sp.ok && <div className="flash">Operação concluída com sucesso para {sp.ok} animal(is).</div>}
       {sp.erro === "mov" && (
         <div className="flash bad" role="alert">
           Não foi possível registrar a operação. Os animais devem estar ativos e a data não pode ser futura.
@@ -202,9 +202,9 @@ export default async function HerdPage({
                     <td style={{ color: r.name ? "var(--ink)" : "var(--muted)" }}>{r.name ?? "—"}</td>
                     <td>
                       {r.sex === "M" ? (
-                        <span className="badge blue" style={{ fontSize: 11, padding: "2px 8px" }}>♂ Macho</span>
+                        <span className="badge blue" style={{ fontSize: 11, padding: "2px 8px" }}>Macho</span>
                       ) : (
-                        <span className="badge" style={{ background: "#fdf2f8", color: "#db2777", borderColor: "#fbcfe8", fontSize: 11, padding: "2px 8px" }}>♀ Fêmea</span>
+                        <span className="badge" style={{ background: "#fdf2f8", color: "#db2777", borderColor: "#fbcfe8", fontSize: 11, padding: "2px 8px" }}>Fêmea</span>
                       )}
                     </td>
                     <td>{nm(breeds.data, r.breed_id)}</td>
@@ -251,7 +251,9 @@ export default async function HerdPage({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 18 }}>⚡</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
               <strong style={{ color: "var(--brand-hover)", fontSize: 15 }}>Ação nos Animais Selecionados</strong>
             </div>
             <p className="muted" style={{ margin: "0 0 14px 0", fontSize: 13 }}>

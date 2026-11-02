@@ -64,7 +64,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       {perms.includes("counts.create") && (
         <form action={createCount} className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <strong>🔍 Realizar Nova Auditoria / Contagem de Curral</strong>
+            <strong>Realizar Nova Auditoria / Contagem de Curral</strong>
             <span className="badge">Auditoria sem impacto cadastral</span>
           </div>
           <div className="form2">
@@ -97,7 +97,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       {/* Histórico de Auditorias */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>📋 Histórico de Auditorias Realizadas ({((counts.data ?? []) as any[]).length})</strong>
+          <strong>Histórico de Auditorias Realizadas ({((counts.data ?? []) as any[]).length})</strong>
           <span className="badge neutral">Conferência Física</span>
         </div>
 

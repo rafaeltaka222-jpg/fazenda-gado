@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FarmSelect from "./FarmSelect";
 import ThemeToggle from "./ThemeToggle";
+import BullLogo from "./BullLogo";
 import { createClient } from "@/lib/supabase/server";
 import type { FarmItem } from "@/lib/context";
 
@@ -223,23 +224,14 @@ export default async function AppShell({
         <input type="checkbox" id="navtoggle" className="nav-toggle" aria-label="Abrir menu" />
         <label htmlFor="navtoggle" className="burger">
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18 }}>🌱</span>
+            <BullLogo size={20} />
             <span style={{ fontWeight: 700, fontSize: 16 }}>Fazenda Gado</span>
           </div>
-          <span aria-hidden="true" style={{ fontSize: 13, background: "var(--brand-light)", padding: "4px 8px", borderRadius: 6, color: "var(--brand)" }}>☰ Menu</span>
+          <span aria-hidden="true" style={{ fontSize: 13, background: "var(--brand-light)", padding: "4px 8px", borderRadius: 6, color: "var(--brand)", display: "flex", alignItems: "center", gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            Menu
+          </span>
         </label>
-        
-        <div className="brand-wrapper">
-          <div className="brand-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
-              <path d="M12 2a10 10 0 0 1 10 10" />
-              <path d="M12 12L2.5 7.5" />
-            </svg>
-          </div>
-          <span className="brand-name">Fazenda Gado</span>
-          <span className="brand-badge">PRO</span>
-        </div>
 
         <nav className="nav" aria-label="Menu principal">
           {GROUPS.map((g) => {
@@ -272,20 +264,53 @@ export default async function AppShell({
       <div className="content">
         <header className="topbar">
           <div className="topbar-left">
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>📍</span>
-              <FarmSelect farms={farms} activeId={active?.id ?? ""} />
+            <div className="topbar-brand">
+              <BullLogo size={26} />
+              <span className="brand-text">FAZENDA GADO</span>
+              <span className="brand-badge-pro">PRO</span>
             </div>
+
+            {/* Abas Superiores de Domínio AgTech */}
+            <div className="domain-tabs">
+              <Link
+                href="/dashboard"
+                className={"domain-tab" + (["dashboard", "reports"].includes(current) ? " active" : "")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z" />
+                </svg>
+                <span>Visão Geral</span>
+              </Link>
+              <Link
+                href="/herd"
+                className={"domain-tab" + (["herd", "weighings", "structure", "inventory"].includes(current) ? " active" : "")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Rebanho & Manejo</span>
+              </Link>
+              <Link
+                href="/health"
+                className={"domain-tab" + (["health", "reproduction"].includes(current) ? " active" : "")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Sanidade & Zootecnia</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="topbar-right">
             <form action="/search" method="get" role="search" className="searchbox">
               <svg className="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input name="q" type="search" minLength={2} placeholder="Buscar brinco, nome, lote, pasto..." aria-label="Busca global" />
+              <input name="q" type="search" minLength={2} placeholder="Buscar brinco, lote..." aria-label="Busca global" />
             </form>
-          </div>
 
-          <div className="topbar-right">
-            {/* Alternador Rápido de Tema (Ícone no Topo) */}
+            {/* Alternador de Tema */}
             <ThemeToggle compact />
 
             <div className="user-badge" title={email}>
