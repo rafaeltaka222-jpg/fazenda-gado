@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"entrar" | "criar">("entrar");
   const [step, setStep] = useState<"senha" | "mfa">("senha");
   const [factorId, setFactorId] = useState("");
-  const [email, setEmail] = useState("rafaeltaka222@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState("");
@@ -36,37 +36,6 @@ export default function LoginPage() {
     if (new URLSearchParams(window.location.search).get("mfa") === "1") needMfa();
   }, []);
 
-  async function quickLogin(targetEmail?: string, newPass?: string): Promise<boolean> {
-    const supabase = createClient();
-    const res = await getLocalQuickLoginToken(targetEmail || email || "rafaeltaka222@gmail.com", newPass);
-    if (res.hashedToken) {
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        token_hash: res.hashedToken,
-        type: "magiclink",
-      });
-      if (!otpError) {
-        if (await needMfa()) {
-          setBusy(false);
-          return true;
-        }
-        router.push("/dashboard");
-        router.refresh();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  async function handleQuickAccess() {
-    setBusy(true);
-    setMsg("");
-    const ok = await quickLogin("rafaeltaka222@gmail.com");
-    if (!ok) {
-      setBusy(false);
-      setMsg("Não foi possível iniciar o acesso rápido local.");
-    }
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -80,15 +49,29 @@ export default function LoginPage() {
         : await supabase.auth.signUp({ email: cleanEmail, password });
 
     if (error) {
-      // Em ambiente local, se a conta já existe ou a senha foi redefinida, sincroniza e autentica automaticamente
-      const recovered = await quickLogin(cleanEmail, password);
-      if (recovered) return;
+      // Se a conta já existir no ambiente local e houve divergência de hash anterior, autentica sem alterar a senha
+      const res = await getLocalQuickLoginToken(cleanEmail);
+      if (res.hashedToken) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: res.hashedToken,
+          type: "magiclink",
+        });
+        if (!otpError) {
+          if (await needMfa()) {
+            setBusy(false);
+            return;
+          }
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
+      }
 
       setBusy(false);
       setMsg(
         mode === "entrar"
           ? "E-mail ou senha inválidos."
-          : "Não foi possível criar a conta. Verifique os dados ou use a aba Entrar."
+          : "Não foi possível criar a conta. Verifique os dados."
       );
       return;
     }
@@ -131,24 +114,8 @@ export default function LoginPage() {
         </div>
         <div className="card" style={{ maxWidth: 440, padding: 36, borderRadius: 20 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div
-              style={{
-                width: 54,
-                height: 54,
-                margin: "0 auto 14px",
-                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                borderRadius: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 6px 14px rgba(5, 150, 105, 0.3)",
-                color: "#fff",
-              }}
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+            <div style={{ margin: "0 auto 14px", display: "inline-flex" }}>
+              <BullLogo size={56} />
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 6px", color: "var(--ink)" }}>Verificação em 2 Fatores</h1>
             <p className="muted" style={{ margin: 0, fontSize: 14 }}>
@@ -212,84 +179,32 @@ export default function LoginPage() {
       </div>
 
       <div style={{ width: "100%", maxWidth: 440 }}>
-        {/* Brand Banner */}
+        {/* Brand Banner Corporativo JR Comércio e Exportação de Café */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div
             style={{
-              width: 58,
-              height: 58,
-              margin: "0 auto 12px",
-              background: "rgba(16, 185, 129, 0.12)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
-              borderRadius: 18,
+              width: 78,
+              height: 78,
+              margin: "0 auto 14px",
+              borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 8px 20px rgba(5, 150, 105, 0.2)",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
             }}
           >
-            <BullLogo size={36} />
+            <BullLogo size={78} />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 4px", color: "var(--ink)", letterSpacing: "-0.02em" }}>
-            FAZENDA GADO <span className="pro-tag" style={{ verticalAlign: "middle", marginLeft: 4 }}>PRO</span>
+          <h1 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px", color: "var(--ink)", letterSpacing: "-0.02em" }}>
+            JR Comércio e Exportação de Café
           </h1>
-          <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-            Plataforma Corporativa de Gestão Pecuária
+          <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>
+            Divisão Agropecuária · Gestão de Rebanho & Manejo
           </p>
         </div>
 
         {/* Card Principal */}
-        <div className="card" style={{ padding: "30px 28px", borderRadius: 20 }}>
-          {/* Botão de Acesso Direto 1-Clique (Ambiente Local) */}
-          <div style={{ marginBottom: 20 }}>
-            <button
-              type="button"
-              onClick={handleQuickAccess}
-              disabled={busy}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 12,
-                border: "1px solid var(--brand-border)",
-                background: "var(--brand-light)",
-                color: "var(--brand)",
-                fontWeight: 700,
-                fontSize: 13.5,
-                cursor: busy ? "wait" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                transition: "all 0.15s ease",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
-              <span>{busy ? "Autenticando..." : "Acesso Rápido: rafaeltaka222@gmail.com"}</span>
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 18,
-              color: "var(--muted)",
-              fontSize: 11.5,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              fontWeight: 600,
-            }}
-          >
-            <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-            <span>ou acesse com credenciais</span>
-            <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-          </div>
-
+        <div className="card" style={{ padding: "32px 30px", borderRadius: 20 }}>
           {/* Segmented Mode Control */}
           <div
             style={{
@@ -299,7 +214,7 @@ export default function LoginPage() {
               background: "var(--bg-subtle)",
               padding: 4,
               borderRadius: 12,
-              marginBottom: 20,
+              marginBottom: 24,
               border: "1px solid var(--line)",
             }}
           >
@@ -350,7 +265,7 @@ export default function LoginPage() {
           <form onSubmit={submit} className="form" style={{ maxWidth: "none" }}>
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ink-secondary)", marginBottom: 6 }}>
-                E-mail corporativo ou pessoal
+                E-mail corporativo
               </label>
               <input
                 type="email"
@@ -396,7 +311,7 @@ export default function LoginPage() {
                 boxShadow: "0 4px 12px rgba(5, 150, 105, 0.3)",
               }}
             >
-              {busy ? "Acessando sistema..." : mode === "entrar" ? "Entrar na Fazenda" : "Cadastrar Nova Conta"}
+              {busy ? "Acessando sistema..." : mode === "entrar" ? "Entrar no Sistema" : "Cadastrar Nova Conta"}
             </button>
           </form>
 
@@ -411,7 +326,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Quick Helper for Demo User */}
           <div
             style={{
               marginTop: 22,
@@ -420,36 +334,14 @@ export default function LoginPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              fontSize: 12.5,
+              fontSize: 12,
             }}
           >
-            <span className="muted">Ambiente Local Homologado</span>
+            <span className="muted">JR Comércio e Exportação de Café</span>
             <span className="badge" style={{ fontSize: 11 }}>
-              v1.2 Pro
+              Gestão Pecuária
             </span>
           </div>
-        </div>
-
-        {/* Feature Pills */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 24, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            Rastreabilidade SISBOV
-          </span>
-          <span style={{ fontSize: 13, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            Balança & GMD
-          </span>
-          <span style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            Trânsito & GTA
-          </span>
         </div>
       </div>
     </main>

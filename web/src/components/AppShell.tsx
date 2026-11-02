@@ -1,5 +1,4 @@
 import Link from "next/link";
-import FarmSelect from "./FarmSelect";
 import ThemeToggle from "./ThemeToggle";
 import BullLogo from "./BullLogo";
 import { createClient } from "@/lib/supabase/server";
@@ -198,7 +197,6 @@ function NavIcon({ name }: { name: string }) {
 
 export default async function AppShell({
   email,
-  farms,
   active,
   current,
   children,
@@ -221,14 +219,41 @@ export default async function AppShell({
   return (
     <div className="shell">
       <aside className="sidebar">
+        {/* Identidade Corporativa Oficial no Topo da Barra Lateral */}
+        <Link href="/dashboard" className="brand-wrapper" style={{ textDecoration: "none" }}>
+          <BullLogo size={42} />
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              JR Comércio
+            </span>
+            <span style={{ fontWeight: 600, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.25 }}>
+              e Exportação de Café
+            </span>
+          </div>
+        </Link>
+
         <input type="checkbox" id="navtoggle" className="nav-toggle" aria-label="Abrir menu" />
         <label htmlFor="navtoggle" className="burger">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <BullLogo size={20} />
-            <span style={{ fontWeight: 700, fontSize: 16 }}>Fazenda Gado</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <BullLogo size={32} />
+            <span style={{ fontWeight: 700, fontSize: 14.5 }}>JR Comércio e Exportação de Café</span>
           </div>
-          <span aria-hidden="true" style={{ fontSize: 13, background: "var(--brand-light)", padding: "4px 8px", borderRadius: 6, color: "var(--brand)", display: "flex", alignItems: "center", gap: 4 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: 13,
+              background: "var(--brand-light)",
+              padding: "4px 8px",
+              borderRadius: 6,
+              color: "var(--brand)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
             Menu
           </span>
         </label>
@@ -256,7 +281,9 @@ export default async function AppShell({
           <ThemeToggle />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, color: "var(--muted)", padding: "0 4px" }}>
             <span>{active ? active.name : "Nenhuma fazenda"}</span>
-            <span className="badge" style={{ fontSize: 10, padding: "1px 6px" }}>v1.2</span>
+            <span className="badge" style={{ fontSize: 10, padding: "1px 6px" }}>
+              Agro
+            </span>
           </div>
         </div>
       </aside>
@@ -264,41 +291,38 @@ export default async function AppShell({
       <div className="content">
         <header className="topbar">
           <div className="topbar-left">
-            <div className="topbar-brand">
-              <BullLogo size={26} />
-              <span className="brand-text">FAZENDA GADO</span>
-              <span className="brand-badge-pro">PRO</span>
-            </div>
-
-            {/* Abas Superiores de Domínio AgTech */}
-            <div className="domain-tabs">
-              <Link
-                href="/dashboard"
-                className={"domain-tab" + (["dashboard", "reports"].includes(current) ? " active" : "")}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z" />
-                </svg>
-                <span>Visão Geral</span>
-              </Link>
-              <Link
-                href="/herd"
-                className={"domain-tab" + (["herd", "weighings", "structure", "inventory"].includes(current) ? " active" : "")}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span>Rebanho & Manejo</span>
-              </Link>
-              <Link
-                href="/health"
-                className={"domain-tab" + (["health", "reproduction"].includes(current) ? " active" : "")}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>Sanidade & Zootecnia</span>
-              </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.18)",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                JR Comércio e Exportação de Café
+              </span>
+              {active && (
+                <>
+                  <span style={{ color: "var(--line-strong)", fontSize: 14 }}>/</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "var(--muted)",
+                      background: "var(--bg-subtle)",
+                      border: "1px solid var(--line)",
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    Unidade: {active.code} · {active.name}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 

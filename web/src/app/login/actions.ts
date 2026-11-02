@@ -5,18 +5,20 @@ const LOCAL_SERVICE_ROLE_JWT =
 const LOCAL_SECRET_KEY = "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz";
 
 export async function getLocalQuickLoginToken(
-  email: string,
-  newPassword?: string
+  email: string
 ): Promise<{ hashedToken?: string; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const isLocal =
     supabaseUrl.includes("127.0.0.1") || supabaseUrl.includes("localhost");
 
   if (!isLocal) {
-    return { error: "Acesso rápido disponível apenas em ambiente local." };
+    return { error: "Disponível apenas em ambiente local." };
   }
 
-  const targetEmail = (email || "rafaeltaka222@gmail.com").trim().toLowerCase();
+  const targetEmail = (email || "").trim().toLowerCase();
+  if (!targetEmail) {
+    return { error: "Informe o e-mail." };
+  }
 
   try {
     const headers = {
@@ -25,7 +27,7 @@ export async function getLocalQuickLoginToken(
       Authorization: `Bearer ${LOCAL_SERVICE_ROLE_JWT}`,
     };
 
-    // Gera um magiclink token_hash para autenticar sem exigir redigitação de senha
+    // Gera um token_hash de sessão local sem alterar a senha cadastrada do usuário
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers,
@@ -37,29 +39,15 @@ export async function getLocalQuickLoginToken(
     });
 
     if (!res.ok) {
-      return { error: "Não foi possível gerar sessão local para este e-mail." };
+      return { error: "Conta não encontrada no ambiente local." };
     }
 
     const data = await res.json();
-
-    // Se o usuário informou uma nova senha válida no ambiente local, sincroniza no GoTrue
-    if (newPassword && newPassword.length >= 6 && data?.id) {
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${data.id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({
-          password: newPassword,
-          email_confirm: true,
-        }),
-        cache: "no-store",
-      }).catch(() => {});
-    }
-
     if (data?.hashed_token) {
       return { hashedToken: data.hashed_token };
     }
 
-    return { error: "Token de acesso local não retornado." };
+    return { error: "Token de sessão não retornado." };
   } catch {
     return { error: "Falha de comunicação com o serviço de autenticação local." };
   }

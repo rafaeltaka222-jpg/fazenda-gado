@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fazenda Gado · Plataforma Pecuária",
-  description: "Gestão inteligente de fazendas de gado de corte e leite",
+  title: "JR Comércio e Exportação de Café · Gestão Pecuária",
+  description: "Plataforma corporativa de gestão pecuária — JR Comércio e Exportação de Café",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
