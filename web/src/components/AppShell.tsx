@@ -1,44 +1,65 @@
 import Link from "next/link";
 import FarmSelect from "./FarmSelect";
+import ThemeToggle from "./ThemeToggle";
 import { createClient } from "@/lib/supabase/server";
 import type { FarmItem } from "@/lib/context";
 
 type Item = { href: string; label: string; key: string; perm: string | null };
 
 const GROUPS: { title: string; items: Item[] }[] = [
-  { title: "Visão geral", items: [{ href: "/dashboard", label: "Painel", key: "dashboard", perm: null }] },
   {
-    title: "Rebanho",
+    title: "Visão Geral",
     items: [
-      { href: "/herd", label: "Rebanho", key: "herd", perm: "animals.view" },
-      { href: "/structure", label: "Lotes e pastos", key: "structure", perm: "lots.view" },
-      { href: "/weighings", label: "Pesagens", key: "weighings", perm: "weighings.view" },
-      { href: "/health", label: "Sanidade", key: "health", perm: "health.view" },
-      { href: "/reproduction", label: "Reprodução", key: "reproduction", perm: "reproduction.view" },
-      { href: "/inventory", label: "Contagem", key: "inventory", perm: "counts.view" },
+      { href: "/dashboard", label: "Painel Principal", key: "dashboard", perm: null },
     ],
   },
   {
-    title: "Operação",
+    title: "Rebanho & Manejo",
     items: [
-      { href: "/tasks", label: "Tarefas", key: "tasks", perm: "tasks.view" },
-      { href: "/stock", label: "Estoque", key: "stock", perm: "inventory.view" },
-      { href: "/costs", label: "Custos", key: "costs", perm: "costs.view" },
-      { href: "/sales", label: "Vendas", key: "sales", perm: "trade.view" },
-      { href: "/people", label: "Pessoas", key: "people", perm: "people.view" },
-      { href: "/import", label: "Importação", key: "import", perm: "imports.view" },
+      { href: "/herd", label: "Rebanho Ativo", key: "herd", perm: "animals.view" },
+      { href: "/weighings", label: "Pesagens & Curral", key: "weighings", perm: "weighings.view" },
+      { href: "/structure", label: "Pastos & Lotes", key: "structure", perm: "lots.view" },
+      { href: "/inventory", label: "Auditoria de Curral", key: "inventory", perm: "counts.view" },
     ],
   },
-  { title: "Análise", items: [{ href: "/reports", label: "Relatórios", key: "reports", perm: "reports.view" }] },
+  {
+    title: "Sanidade & Zootecnia",
+    items: [
+      { href: "/health", label: "Controle Sanitário", key: "health", perm: "health.view" },
+      { href: "/reproduction", label: "Reprodução & IATF", key: "reproduction", perm: "reproduction.view" },
+    ],
+  },
+  {
+    title: "Comercial & Financeiro",
+    items: [
+      { href: "/sales", label: "Vendas & GTA", key: "sales", perm: "trade.view" },
+      { href: "/costs", label: "Custos & Despesas", key: "costs", perm: "costs.view" },
+      { href: "/stock", label: "Estoque de Insumos", key: "stock", perm: "inventory.view" },
+    ],
+  },
+  {
+    title: "Operações de Campo",
+    items: [
+      { href: "/tasks", label: "Tarefas & Manejo", key: "tasks", perm: "tasks.view" },
+      { href: "/people", label: "Pessoas & Equipe", key: "people", perm: "people.view" },
+      { href: "/import", label: "Importar Planilhas", key: "import", perm: "imports.view" },
+    ],
+  },
+  {
+    title: "Inteligência",
+    items: [
+      { href: "/reports", label: "Relatórios & Análise", key: "reports", perm: "reports.view" },
+    ],
+  },
   {
     title: "Administração",
     items: [
       { href: "/farms", label: "Fazendas", key: "farms", perm: null },
-      { href: "/users", label: "Usuários", key: "users", perm: "users.view" },
-      { href: "/settings/fields", label: "Campos personalizados", key: "fields", perm: "settings.view" },
-      { href: "/settings/api", label: "API e integrações", key: "api", perm: "settings.update" },
-      { href: "/audit", label: "Auditoria", key: "audit", perm: "audit.view" },
-      { href: "/security", label: "Segurança (2FA)", key: "security", perm: null },
+      { href: "/users", label: "Usuários & Perfis", key: "users", perm: "users.view" },
+      { href: "/settings/fields", label: "Campos Personalizados", key: "fields", perm: "settings.view" },
+      { href: "/settings/api", label: "API & Integrações", key: "api", perm: "settings.update" },
+      { href: "/audit", label: "Trilha de Auditoria", key: "audit", perm: "audit.view" },
+      { href: "/security", label: "Segurança & 2FA", key: "security", perm: null },
     ],
   },
 ];
@@ -205,7 +226,7 @@ export default async function AppShell({
             <span style={{ fontSize: 18 }}>🌱</span>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Fazenda Gado</span>
           </div>
-          <span aria-hidden="true" style={{ fontSize: 13, background: "#ecfdf5", padding: "4px 8px", borderRadius: 6, color: "#059669" }}>☰ Menu</span>
+          <span aria-hidden="true" style={{ fontSize: 13, background: "var(--brand-light)", padding: "4px 8px", borderRadius: 6, color: "var(--brand)" }}>☰ Menu</span>
         </label>
         
         <div className="brand-wrapper">
@@ -237,6 +258,15 @@ export default async function AppShell({
             );
           })}
         </nav>
+
+        {/* Rodapé da Barra Lateral com Alternador de Tema e Status */}
+        <div className="sidebar-footer">
+          <ThemeToggle />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, color: "var(--muted)", padding: "0 4px" }}>
+            <span>{active ? active.name : "Nenhuma fazenda"}</span>
+            <span className="badge" style={{ fontSize: 10, padding: "1px 6px" }}>v1.2</span>
+          </div>
+        </div>
       </aside>
 
       <div className="content">
@@ -255,6 +285,9 @@ export default async function AppShell({
           </div>
 
           <div className="topbar-right">
+            {/* Alternador Rápido de Tema (Ícone no Topo) */}
+            <ThemeToggle compact />
+
             <div className="user-badge" title={email}>
               <div className="user-avatar">{initial}</div>
               <span style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

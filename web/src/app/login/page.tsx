@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -79,8 +80,11 @@ export default function LoginPage() {
 
   if (step === "mfa") {
     return (
-      <main className="auth" style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #f1f5f9 100%)" }}>
-        <div className="card" style={{ maxWidth: 440, padding: 36, borderRadius: 20, boxShadow: "0 20px 40px -15px rgba(15, 23, 42, 0.1)" }}>
+      <main className="auth">
+        <div style={{ position: "absolute", top: 20, right: 24 }}>
+          <ThemeToggle compact />
+        </div>
+        <div className="card" style={{ maxWidth: 440, padding: 36, borderRadius: 20 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <div style={{
               width: 54, height: 54, margin: "0 auto 14px",
@@ -141,7 +145,12 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="auth" style={{ background: "linear-gradient(145deg, #ecfdf5 0%, #f8fafc 40%, #f1f5f9 100%)", minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px 16px" }}>
+    <main className="auth" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px 16px", position: "relative" }}>
+      {/* Botão de Alternar Modo Claro/Escuro */}
+      <div style={{ position: "absolute", top: 20, right: 24 }}>
+        <ThemeToggle compact />
+      </div>
+
       <div style={{ width: "100%", maxWidth: 440 }}>
         {/* Brand Banner */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -161,7 +170,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card Principal */}
-        <div className="card" style={{ padding: "32px 30px", borderRadius: 20, boxShadow: "0 20px 45px -12px rgba(15, 23, 42, 0.12)" }}>
+        <div className="card" style={{ padding: "32px 30px", borderRadius: 20 }}>
           {/* Segmented Mode Control */}
           <div style={{
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4,
@@ -173,9 +182,9 @@ export default function LoginPage() {
               onClick={() => { setMode("entrar"); setMsg(""); }}
               style={{
                 border: 0, borderRadius: 8, padding: "8px 12px", fontSize: 13.5, fontWeight: mode === "entrar" ? 600 : 500,
-                background: mode === "entrar" ? "#ffffff" : "transparent",
+                background: mode === "entrar" ? "var(--surface)" : "transparent",
                 color: mode === "entrar" ? "var(--ink)" : "var(--muted)",
-                boxShadow: mode === "entrar" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                boxShadow: mode === "entrar" ? "var(--shadow-sm)" : "none",
                 cursor: "pointer", transition: "all 0.15s ease"
               }}
             >
@@ -186,9 +195,9 @@ export default function LoginPage() {
               onClick={() => { setMode("criar"); setMsg(""); }}
               style={{
                 border: 0, borderRadius: 8, padding: "8px 12px", fontSize: 13.5, fontWeight: mode === "criar" ? 600 : 500,
-                background: mode === "criar" ? "#ffffff" : "transparent",
+                background: mode === "criar" ? "var(--surface)" : "transparent",
                 color: mode === "criar" ? "var(--ink)" : "var(--muted)",
-                boxShadow: mode === "criar" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                boxShadow: mode === "criar" ? "var(--shadow-sm)" : "none",
                 cursor: "pointer", transition: "all 0.15s ease"
               }}
             >
@@ -259,7 +268,7 @@ export default function LoginPage() {
             display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5
           }}>
             <span className="muted">Ambiente Local Homologado</span>
-            <span className="badge" style={{ fontSize: 11 }}>v1.0 Pro</span>
+            <span className="badge" style={{ fontSize: 11 }}>v1.2 Pro</span>
           </div>
         </div>
 

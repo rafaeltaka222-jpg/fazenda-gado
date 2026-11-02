@@ -98,7 +98,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
 
               return (
                 <div key={p.id} style={{
-                  padding: 16, borderRadius: 14, background: "#ffffff",
+                  padding: 16, borderRadius: 14, background: "var(--surface)",
                   border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)"
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

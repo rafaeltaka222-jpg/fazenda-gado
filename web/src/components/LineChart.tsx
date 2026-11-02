@@ -1,4 +1,4 @@
-// Gráfico de linha refinado em SVG com preenchimento em degradê, renderizado no servidor.
+// Gráfico de linha refinado em SVG com preenchimento em degradê adaptável ao modo Claro/Escuro.
 export default function LineChart({
   points,
   unit,
@@ -34,11 +34,11 @@ export default function LineChart({
         <title>{title}</title>
         <defs>
           <linearGradient id="agroAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.01" />
+            <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.01" />
           </linearGradient>
           <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#059669" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="var(--brand)" floodOpacity="0.25" />
           </filter>
         </defs>
 
@@ -52,11 +52,11 @@ export default function LineChart({
                 x2={W - R}
                 y1={y(v)}
                 y2={y(v)}
-                stroke="#f1f5f9"
+                stroke="var(--line)"
                 strokeWidth="1.5"
                 strokeDasharray="4 4"
               />
-              <text x={L - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#94a3b8" fontWeight="500">
+              <text x={L - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" fontWeight="500">
                 {fmt(v)}
               </text>
             </g>
@@ -67,7 +67,7 @@ export default function LineChart({
         <path d={areaPath} fill="url(#agroAreaGrad)" />
 
         {/* Linha principal */}
-        <path d={linePath} fill="none" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={linePath} fill="none" stroke="var(--brand)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
         {/* Pontos de dados e labels */}
         {points.map((p, i) => {
@@ -75,7 +75,7 @@ export default function LineChart({
           const py = y(p.value);
           return (
             <g key={p.label}>
-              <circle cx={px} cy={py} r="6" fill="#ffffff" stroke="#059669" strokeWidth="3" filter="url(#shadow)" />
+              <circle cx={px} cy={py} r="6" fill="var(--surface)" stroke="var(--brand)" strokeWidth="3" filter="url(#shadow)" />
               {/* Badge/Valor acima do ponto */}
               <rect
                 x={px - 28}
@@ -83,15 +83,15 @@ export default function LineChart({
                 width="56"
                 height="18"
                 rx="5"
-                fill="#ffffff"
-                stroke="#e2e8f0"
+                fill="var(--surface)"
+                stroke="var(--line-strong)"
                 strokeWidth="1"
               />
-              <text x={px} y={py - 11} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#0f172a">
+              <text x={px} y={py - 11} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="var(--ink)">
                 {fmt(p.value)} {unit}
               </text>
               {/* Mês/Rótulo no rodapé */}
-              <text x={px} y={H - 12} textAnchor="middle" fontSize="11" fontWeight="600" fill="#64748b">
+              <text x={px} y={H - 12} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--muted)">
                 {p.label}
               </text>
             </g>
