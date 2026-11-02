@@ -49,50 +49,54 @@
 }
 
 /* Modo Escuro (Dark Mode) Completo e Confortável */
+html[data-theme="dark"],
+body[data-theme="dark"],
 [data-theme="dark"],
+html.dark,
+body.dark,
 .dark {
   color-scheme: dark;
-  --bg: #090e1a;
-  --bg-subtle: #0f172a;
-  --surface: #141e33;
-  --surface-hover: #1b2844;
-  --line: #223254;
-  --line-strong: #334773;
-  --ink: #f8fafc;
-  --ink-secondary: #cbd5e1;
-  --muted: #94a3b8;
-  --muted-light: #64748b;
+  --bg: #090e1a !important;
+  --bg-subtle: #0f172a !important;
+  --surface: #141e33 !important;
+  --surface-hover: #1b2844 !important;
+  --line: #223254 !important;
+  --line-strong: #334773 !important;
+  --ink: #f8fafc !important;
+  --ink-secondary: #cbd5e1 !important;
+  --muted: #94a3b8 !important;
+  --muted-light: #64748b !important;
   
   /* Cores Temáticas Agro no Escuro */
-  --brand: #10b981;
-  --brand-hover: #34d399;
-  --brand-active: #059669;
-  --brand-light: rgba(16, 185, 129, 0.14);
-  --brand-border: rgba(16, 185, 129, 0.35);
-  --brand-ring: rgba(16, 185, 129, 0.28);
+  --brand: #10b981 !important;
+  --brand-hover: #34d399 !important;
+  --brand-active: #059669 !important;
+  --brand-light: rgba(16, 185, 129, 0.16) !important;
+  --brand-border: rgba(16, 185, 129, 0.35) !important;
+  --brand-ring: rgba(16, 185, 129, 0.3) !important;
   
   /* Acentos de Status no Escuro */
-  --blue: #38bdf8;
-  --blue-light: rgba(56, 189, 248, 0.14);
-  --blue-border: rgba(56, 189, 248, 0.35);
+  --blue: #38bdf8 !important;
+  --blue-light: rgba(56, 189, 248, 0.16) !important;
+  --blue-border: rgba(56, 189, 248, 0.35) !important;
   
-  --amber: #fbbf24;
-  --amber-light: rgba(251, 191, 36, 0.14);
-  --amber-border: rgba(251, 191, 36, 0.35);
+  --amber: #fbbf24 !important;
+  --amber-light: rgba(251, 191, 36, 0.16) !important;
+  --amber-border: rgba(251, 191, 36, 0.35) !important;
   
-  --purple: #a78bfa;
-  --purple-light: rgba(167, 139, 250, 0.14);
-  --purple-border: rgba(167, 139, 250, 0.35);
+  --purple: #a78bfa !important;
+  --purple-light: rgba(167, 139, 250, 0.16) !important;
+  --purple-border: rgba(167, 139, 250, 0.35) !important;
   
-  --red: #f87171;
-  --red-light: rgba(248, 113, 113, 0.14);
-  --red-border: rgba(248, 113, 113, 0.35);
+  --red: #f87171 !important;
+  --red-light: rgba(248, 113, 113, 0.16) !important;
+  --red-border: rgba(248, 113, 113, 0.35) !important;
   
   /* Sombras Dark */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
-  --shadow-card-hover: 0 12px 24px -4px rgba(0, 0, 0, 0.5);
-  --shadow-btn: 0 2px 8px 0 rgba(16, 185, 129, 0.35);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4) !important;
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.35) !important;
+  --shadow-card-hover: 0 12px 24px -4px rgba(0, 0, 0, 0.5) !important;
+  --shadow-btn: 0 2px 8px 0 rgba(16, 185, 129, 0.35) !important;
 }
 
 html, body {
@@ -101,6 +105,13 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html[data-theme="dark"],
+body[data-theme="dark"],
+.dark {
+  background-color: var(--bg) !important;
+  color: var(--ink) !important;
 }
 
 body {
@@ -504,10 +515,12 @@ a {
   border: 1px solid rgba(219, 39, 119, 0.28);
 }
 
-[data-theme="dark"] .tag-female {
-  background: rgba(244, 114, 182, 0.16);
-  color: #f472b6;
-  border-color: rgba(244, 114, 182, 0.35);
+html[data-theme="dark"] .tag-female,
+body[data-theme="dark"] .tag-female,
+.dark .tag-female {
+  background: rgba(244, 114, 182, 0.16) !important;
+  color: #f472b6 !important;
+  border-color: rgba(244, 114, 182, 0.35) !important;
 }
 
 /* Indicadores de Lotação e Barras de Progresso */
@@ -842,8 +855,10 @@ input:focus, select:focus, textarea:focus {
   transition: background 0.3s ease;
 }
 
-[data-theme="dark"] .auth {
-  background: linear-gradient(145deg, #090e1a 0%, #111827 50%, #0f172a 100%);
+html[data-theme="dark"] .auth,
+body[data-theme="dark"] .auth,
+.dark .auth {
+  background: linear-gradient(145deg, #090e1a 0%, #111827 50%, #0f172a 100%) !important;
 }
 
 .auth .card {
@@ -853,8 +868,10 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
 }
 
-[data-theme="dark"] .auth .card {
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+html[data-theme="dark"] .auth .card,
+body[data-theme="dark"] .auth .card,
+.dark .auth .card {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Responsividade Mobile e Tablet */
