@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const securityHeaders = [
   {
     key: "X-Content-Type-Options",
@@ -19,17 +21,17 @@ const securityHeaders = [
   },
   {
     key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    value: isProd ? "max-age=63072000; includeSubDomains; preload" : "max-age=0",
   },
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self';",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
-      "style-src 'self' 'unsafe-inline';",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
       "img-src 'self' data: blob:;",
-      "font-src 'self';",
-      "connect-src 'self' http://127.0.0.1:54321 https://*.supabase.co;",
+      "font-src 'self' data: https://fonts.gstatic.com;",
+      "connect-src 'self' http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:54321 ws://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 https://*.supabase.co;",
       "frame-ancestors 'self';",
     ].join(" "),
   },
@@ -37,6 +39,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   /* config options here */
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   cacheComponents: true,
   partialPrefetching: true,
   async headers() {
