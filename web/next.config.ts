@@ -31,7 +31,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
       "img-src 'self' data: blob:;",
       "font-src 'self' data: https://fonts.gstatic.com;",
-      "connect-src 'self' http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:54321 ws://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 https://*.supabase.co;",
+      "connect-src 'self' http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:54321 ws://localhost:54321 ws://127.0.0.1:3000 ws://localhost:3000 https://*.supabase.co wss://*.supabase.co;",
       "frame-ancestors 'self';",
     ].join(" "),
   },

@@ -10,9 +10,10 @@ export async function getLocalQuickLoginToken(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const isLocal =
     supabaseUrl.includes("127.0.0.1") || supabaseUrl.includes("localhost");
+  const cloudSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-  if (!isLocal) {
-    return { error: "Disponível apenas em ambiente local." };
+  if (!isLocal && !cloudSecretKey) {
+    return { error: "Disponível apenas com chave administrativa configurada." };
   }
 
   const targetEmail = (email || "").trim().toLowerCase();
@@ -21,11 +22,13 @@ export async function getLocalQuickLoginToken(
   }
 
   try {
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      apikey: LOCAL_SECRET_KEY,
-      Authorization: `Bearer ${LOCAL_SERVICE_ROLE_JWT}`,
+      apikey: isLocal ? LOCAL_SECRET_KEY : cloudSecretKey,
     };
+    if (isLocal) {
+      headers.Authorization = `Bearer ${LOCAL_SERVICE_ROLE_JWT}`;
+    }
 
     // Gera um token_hash de sessão local sem alterar a senha cadastrada do usuário
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {

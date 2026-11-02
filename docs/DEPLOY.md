@@ -16,10 +16,9 @@
 3. Variáveis de ambiente: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `REQUIRE_ADMIN_2FA` (true recomendado).
 4. Deploy. Abra o endereço, crie a conta e a primeira fazenda.
 
-## 3. Cabeçalhos de segurança (recomendado)
-Em `web/next.config.ts` adicione `headers()` com `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
-`Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` e uma `Content-Security-Policy` testada com o site.
-(TODO: ainda não configurado; uma CSP exige testar o Next.js e o QR code do 2FA, que usa imagem `data:`.)
+## 3. Cabeçalhos de segurança (configurados)
+Em `web/next.config.ts` já estão configurados `headers()` com `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` e `Content-Security-Policy` compatível com QR code `data:` do 2FA e conexões `https://*.supabase.co` / `wss://*.supabase.co`.
 
 ## 4. Ambientes
 Desenvolvimento = banco local (Docker). Homologação = segundo projeto Supabase + segundo projeto Vercel. Produção = terceiro par.

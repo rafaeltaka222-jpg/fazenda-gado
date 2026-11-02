@@ -52,7 +52,20 @@ export async function createScalePresets() {
   const supabase = await createClient();
   const farmId = ctx.active.id;
 
-  const presets = [
+  const presets: Array<{
+    farm_id: string;
+    name: string;
+    delimiter: string;
+    has_header: boolean;
+    date_format: string;
+    decimal_separator: string;
+    col_animal: number;
+    col_date: number;
+    col_time: number | null;
+    col_weight: number;
+    default_time: string;
+    device_name: string;
+  }> = [
     {
       farm_id: farmId,
       name: "Balança Coimma KM-3 Plus (CSV)",
