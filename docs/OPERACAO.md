@@ -19,9 +19,9 @@ ação (ver, criar, editar, excluir, exportar, imprimir, importar). Só se conce
 - **Integridade:** em Auditoria, "Verificar integridade do registro" (faça periodicamente).
 
 ## Importação de pesagens
-Cadastre um layout (separador, colunas, formato de data, decimal), envie o arquivo, revise a prévia (OK, aviso, erro, duplicada),
+Cadastre um layout (separador, colunas, formato de data, decimal) ou carregue os **Perfis Homologados** com 1 clique
+(Coimma KM-3 Plus CSV, Tru-Test XR5000/S3 CSV e IdBeck 3.0 TXT). Envie o arquivo, revise a prévia (OK, aviso, erro, duplicada),
 corrija ou ignore as linhas com erro e confirme. Reenviar o mesmo arquivo não duplica pesagens.
-Balança Coimma KM-3: o layout real depende de um arquivo exportado por ela ou do manual do fabricante (TODO).
 
 ## Integrações (API)
 Ver `docs/API.md`. Chaves são criadas em **API e integrações**; o valor só aparece uma vez.
@@ -31,7 +31,8 @@ Ver `docs/API.md`. Chaves são criadas em **API e integrações**; o valor só a
   (pai = último reprodutor da cobertura, se não informado). Parto previsto = última cobertura + 283 dias (estimativa).
 - **Pessoas:** cadastro de compradores, fornecedores, funcionários etc. (só administrador e gerente; CPF/CNPJ validado).
 - **Vendas:** informe os brincos, o comprador e o valor total; os animais saem do rebanho ativo e a receita aparece no Painel.
-  Vendas feitas direto na página Rebanho não têm valor registrado. Não há estorno de venda pela tela (TODO).
+  Vendas feitas direto na página Rebanho não têm valor registrado. Caso necessário, é possível realizar o **Estorno Auditado**
+  da venda informando o motivo obrigatório (retornando os animais ao status ativo e registrando na trilha de auditoria SHA-256).
 
 ## Contagem, tarefas e busca
 - **Contagem:** em Rebanho > Contagem, informe os brincos encontrados em um lote, pasto ou na fazenda toda. O sistema aponta quem falta

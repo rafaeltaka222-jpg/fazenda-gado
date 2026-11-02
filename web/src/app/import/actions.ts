@@ -97,8 +97,16 @@ export async function createScalePresets() {
     },
   ];
 
+  const { data: existing } = await supabase
+    .from("import_layouts")
+    .select("name")
+    .eq("farm_id", farmId);
+  const existingNames = new Set((existing ?? []).map((r) => String(r.name).toLowerCase()));
+
   for (const p of presets) {
-    await supabase.from("import_layouts").upsert(p, { onConflict: "farm_id,name", ignoreDuplicates: true });
+    if (!existingNames.has(p.name.toLowerCase())) {
+      await supabase.from("import_layouts").insert(p);
+    }
   }
 
   revalidatePath("/import");
