@@ -38,12 +38,33 @@ export async function registerWeighings(formData: FormData) {
   if (!date || items.length === 0) redirect(withParam(back, "erro", "peso"));
 
   const supabase = await createClient();
+
+  // Regras de Integridade: animal vendido ou morto não recebe pesagem;
+  // e pesagem não pode ser anterior à data de nascimento.
+  const animalIds = items.map((i) => i.animal_id);
+  const { data: animalsFound } = await supabase
+    .from("animals")
+    .select("id, status, birth_date, ear_tag")
+    .eq("farm_id", ctx.active.id)
+    .in("id", animalIds);
+
+  const inactives = (animalsFound ?? []).filter((a: any) => a.status !== "ativo");
+  if (inactives.length > 0) {
+    redirect(withParam(back, "erro", "animal_inativo"));
+  }
+
+  const beforeBirth = (animalsFound ?? []).filter((a: any) => a.birth_date && date < a.birth_date);
+  if (beforeBirth.length > 0) {
+    redirect(withParam(back, "erro", "pesagem_antes_nasc"));
+  }
+
   const { data, error } = await supabase.rpc("register_weighings", { p_farm: ctx.active.id, p_items: items });
   if (error) {
     redirect(withParam(back, "erro", error.code === "42501" ? "perm" : error.code === "23505" ? "dup" : "peso"));
   }
   revalidatePath("/herd");
   revalidatePath("/weighings");
+  revalidatePath("/dashboard");
   const res = (data ?? {}) as { inserted?: number; warnings?: unknown[] };
   redirect(withParam(withParam(back, "ok", String(res.inserted ?? items.length)), "av", String(res.warnings?.length ?? 0)));
 }
@@ -59,5 +80,7 @@ export async function voidWeighing(formData: FormData) {
   const { error } = await supabase.rpc("void_weighing", { p_id: id, p_reason: reason });
   if (error) redirect(withParam(back, "erro", error.code === "42501" ? "perm" : "peso"));
   revalidatePath("/herd");
+  revalidatePath("/weighings");
+  revalidatePath("/dashboard");
   redirect(withParam(back, "ok", "anulada"));
 }

@@ -1,18 +1,42 @@
-"use server";
+﻿"use server";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const FARM_COOKIE = { path: "/", httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production" };
+const DEFAULT_BREEDS = ["Nelore", "Girolando", "Angus", "Brahman", "Senepol"];
+const DEFAULT_CATEGORIES = ["Bezerro", "Novilha", "Garrote", "Vaca", "Touro"];
+
+async function seedDefaultCatalog(supabase: any, farmId: string) {
+  if (!UUID.test(farmId)) return;
+  await Promise.all([
+    supabase.from("breeds").upsert(
+      DEFAULT_BREEDS.map((name) => ({ farm_id: farmId, name })),
+      { onConflict: "farm_id,name", ignoreDuplicates: true }
+    ),
+    supabase.from("categories").upsert(
+      DEFAULT_CATEGORIES.map((name) => ({ farm_id: farmId, name })),
+      { onConflict: "farm_id,name", ignoreDuplicates: true }
+    ),
+  ]);
+}
+
 export async function createFarm(formData: FormData) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_organization_with_farm", {
+  const { data, error } = await supabase.rpc("create_organization_with_farm", {
     p_org_name: String(formData.get("org") ?? "").trim(),
     p_farm_code: String(formData.get("code") ?? "").trim(),
     p_farm_name: String(formData.get("name") ?? "").trim(),
   });
   if (error) redirect(`/farms?erro=${error.message.includes("already_has_access") ? "acesso" : "1"}`);
+  const newFarmId = typeof data === "string" ? data : (data as any)?.farm_id ?? null;
+  if (newFarmId && UUID.test(newFarmId)) {
+    await seedDefaultCatalog(supabase, newFarmId);
+    (await cookies()).set("farm_id", newFarmId, FARM_COOKIE);
+  }
   revalidatePath("/", "layout");
   redirect("/farms");
 }
@@ -21,12 +45,17 @@ export async function createFarmInOrg(formData: FormData) {
   const org = String(formData.get("org_id") ?? "");
   if (!UUID.test(org)) redirect("/farms?erro=1");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_farm_in_org", {
+  const { data, error } = await supabase.rpc("create_farm_in_org", {
     p_org: org,
     p_code: String(formData.get("code") ?? "").trim(),
     p_name: String(formData.get("name") ?? "").trim(),
   });
   if (error) redirect(`/farms?erro=${error.code === "42501" ? "perm" : "1"}`);
+  const newFarmId = typeof data === "string" ? data : (data as any)?.id ?? null;
+  if (newFarmId && UUID.test(newFarmId)) {
+    await seedDefaultCatalog(supabase, newFarmId);
+    (await cookies()).set("farm_id", newFarmId, FARM_COOKIE);
+  }
   revalidatePath("/", "layout");
   redirect("/farms?ok=1");
 }

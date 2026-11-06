@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "AgroPec",
+      "hasCanvas": false,
+      "bodyTextLen": 298,
+      "bodyTextHash": "8e92a4282ee44797b581b65d405a15d80ca3b1dba688781ad0cbf36dfff965fc",
+      "bodyTextPrefix": "Cerca nova Bebedouro Sombra AGROPEC · FAZENDA SÃO JOÃO A porteir",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "AgroPec",
+      "hasCanvas": false,
+      "bodyTextLen": 270,
+      "bodyTextHash": "7132aba70407512a03de560668556d4fc01ae0a75a705c0bb12bb9c27da612c2",
+      "bodyTextPrefix": "AGROPEC · FAZENDA SÃO JOÃO A porteira abre com um clique. Toque ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

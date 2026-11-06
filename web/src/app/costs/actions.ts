@@ -33,10 +33,14 @@ export async function createCost(formData: FormData) {
   });
   if (error) redirect(`/costs?erro=${error.code === "42501" ? "perm" : "falha"}`);
   revalidatePath("/costs");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
   redirect("/costs?ok=1");
 }
 
 export async function voidCost(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   const reason = g(formData, "reason");
   if (!UUID.test(id) || !reason) redirect("/costs?erro=falha");
@@ -44,5 +48,7 @@ export async function voidCost(formData: FormData) {
   const { error } = await supabase.rpc("void_cost", { p_id: id, p_reason: reason });
   if (error) redirect(`/costs?erro=${error.code === "42501" ? "perm" : "falha"}`);
   revalidatePath("/costs");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
   redirect("/costs?ok=anulado");
 }

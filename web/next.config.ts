@@ -38,10 +38,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  /* config options here */
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  cacheComponents: true,
-  partialPrefetching: true,
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+      static: 180,
+    },
+  },
   async headers() {
     return [
       {

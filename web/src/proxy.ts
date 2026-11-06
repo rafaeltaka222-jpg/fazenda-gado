@@ -1,8 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Renova a sessão do Supabase a cada acesso (evita ter que entrar de novo depois de uma hora).
-// No Next.js 16 este arquivo se chama proxy.ts (antes: middleware.ts).
+// Proteção de rotas e renovação de sessão Supabase
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
@@ -19,10 +18,39 @@ export async function proxy(request: NextRequest) {
       },
     }
   );
-  await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  const isPublicRoute =
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/api/v1/") ||
+    pathname.startsWith("/api/");
+
+  // Se não estiver autenticado e tentar acessar uma rota restrita, redireciona ao login
+  if (!user && !isPublicRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Se já autenticado e navegar para /login, redireciona ao dashboard
+  if (user && pathname === "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

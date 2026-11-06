@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import PrintButton from "@/components/PrintButton";
@@ -9,7 +8,6 @@ import { fmtCell, parseDef, type Field } from "@/lib/reports";
 import { loadCustomCatalog } from "@/lib/catalog";
 import { saveReport } from "../actions";
 
-export const instant = false;
 
 const PAGE = 100;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +17,6 @@ export default async function RunReportPage({
 }: {
   searchParams: Promise<{ def?: string; saved?: string; o?: string }>;
 }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -47,13 +44,13 @@ export default async function RunReportPage({
   }
 
   const offset = Math.max(0, parseInt(sp.o ?? "0", 10) || 0);
-  const [res, cat, permsRes] = await Promise.all([
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  const [res, cat, customCat] = await Promise.all([
     supabase.rpc("run_report", { p_farm: a.id, p_def: def, p_limit: PAGE, p_offset: offset }),
     supabase.from("report_fields").select("key, label, type").eq("source", "animals").order("position"),
-    supabase.rpc("my_permissions", { p_farm: a.id }),
+    loadCustomCatalog(supabase, a.id, a.role),
   ]);
-  const canBuild = ((permsRes.data as string[] | null) ?? []).includes("reports.builder");
-  const customCat = await loadCustomCatalog(supabase, a.id, a.role);
+  const canBuild = perms.includes("reports.builder");
   const catalog = new Map([...((cat.data ?? []) as Field[]), ...customCat.fields].map((f) => [f.key, f]));
   const defJson = JSON.stringify(def);
   const self = (o: number) =>

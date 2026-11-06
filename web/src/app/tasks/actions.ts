@@ -35,6 +35,8 @@ export async function createTask(formData: FormData) {
 }
 
 export async function setTaskStatus(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!UUID.test(id) || !["aberta", "concluida", "cancelada"].includes(status)) redirect("/tasks");

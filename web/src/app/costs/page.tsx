@@ -1,11 +1,9 @@
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createCost, voidCost } from "./actions";
 
-export const instant = false;
 
 const CAT: Record<string, string> = {
   racao: "Ração e Suplementos",
@@ -27,7 +25,6 @@ const fmtDate = (d: string) => d.split("-").reverse().join("/");
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function CostsPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; de?: string; ate?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -43,7 +40,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   }
 
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("costs.view")) {
     return (
       <AppShell {...shell}>
@@ -70,11 +67,16 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Gestão Financeira: Custos & Despesas Operacionais</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Apropriação de despesas por lote, pasto ou animal, e apuração de custo por cabeça
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Gestão Financeira: Custos & Despesas
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Apropriação de despesas por lote, pasto ou animal, e apuração de custo por cabeça
+            </p>
+          </div>
         </div>
       </div>
 

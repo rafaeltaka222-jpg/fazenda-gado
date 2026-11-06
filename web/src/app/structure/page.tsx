@@ -1,13 +1,10 @@
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
-import { createLot, createPasture } from "./actions";
+import { createLot, createPasture, deleteLot, deletePasture } from "./actions";
 
-export const instant = false;
 
 export default async function StructurePage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
-  await connection();
   const { erro, ok } = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -46,36 +43,56 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Estrutura da Propriedade: Lotes & Pastos</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Organização espacial, piquetes de pastejo rotacionado e lotes de manejo
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Estrutura da Propriedade: Lotes & Pastos
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Organização espacial, piquetes de pastejo rotacionado e lotes de manejo
+            </p>
+          </div>
         </div>
       </div>
 
-      {ok && <div className="flash">Estrutura cadastrada com sucesso.</div>}
+      {ok === "pasto_criado" && <div className="flash">Pasto cadastrado com sucesso.</div>}
+      {ok === "lote_criado" && <div className="flash">Lote cadastrado com sucesso.</div>}
+      {ok === "pasto_removido" && <div className="flash">Pasto removido com sucesso.</div>}
+      {ok === "lote_removido" && <div className="flash">Lote removido com sucesso.</div>}
+      {ok && !ok.includes("_") && <div className="flash">Estrutura atualizada com sucesso.</div>}
+
+      {erro === "lote_com_animais" && (
+        <div className="flash bad" role="alert">
+          <strong>Regra de Integridade:</strong> Não é possível excluir um lote que contenha animais. Primeiro realize a movimentação dos animais para outro lote.
+        </div>
+      )}
+      {erro === "pasto_com_animais" && (
+        <div className="flash bad" role="alert">
+          <strong>Regra de Integridade:</strong> Não é possível excluir um pasto que contenha animais. Primeiro realize a movimentação dos animais para outro pasto.
+        </div>
+      )}
       {erro === "lote" && <div className="flash bad" role="alert">Não foi possível criar o lote. Verifique se o nome é único e sua permissão.</div>}
       {erro === "pasto" && <div className="flash bad" role="alert">Não foi possível criar o pasto. Verifique os dados informados.</div>}
 
-      {/* Grid de Resumo Estrutural */}
+      {/* Grid de Resumo Estrutural com Estilo KPI */}
       <div className="grid">
-        <div className="card">
-          <small className="muted">Total de Pastos / Piquetes</small>
-          <div className="big">{pastures.length}</div>
+        <div className="card" style={{ borderLeft: "4px solid #3b82f6" }}>
+          <small className="muted" style={{ fontWeight: 600 }}>Total de Pastos / Piquetes</small>
+          <div className="big" style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)" }}>{pastures.length}</div>
           <small className="muted">{totalArea > 0 ? `${totalArea.toFixed(1)} ha mapeados` : "Área não informada"}</small>
         </div>
 
-        <div className="card">
-          <small className="muted">Capacidade Suportada</small>
-          <div className="big" style={{ color: "var(--brand)" }}>{totalCapacity} <span style={{ fontSize: 16 }}>cab.</span></div>
+        <div className="card" style={{ borderLeft: "4px solid #10b981" }}>
+          <small className="muted" style={{ fontWeight: 600 }}>Capacidade Suportada</small>
+          <div className="big" style={{ fontSize: 28, fontWeight: 800, color: "#10b981" }}>{totalCapacity} <span style={{ fontSize: 16, fontWeight: 600, color: "var(--muted)" }}>cab.</span></div>
           <small className="muted">{animals.length} animais alojados atualmente</small>
         </div>
 
-        <div className="card">
-          <small className="muted">Lotes de Manejo</small>
-          <div className="big">{lots.length}</div>
-          <small className="muted">Grupos nutricionais/operacionais</small>
+        <div className="card" style={{ borderLeft: "4px solid #f59e0b" }}>
+          <small className="muted" style={{ fontWeight: 600 }}>Lotes de Manejo</small>
+          <div className="big" style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)" }}>{lots.length}</div>
+          <small className="muted">Grupos nutricionais / operacionais</small>
         </div>
       </div>
 
@@ -118,11 +135,27 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
                     <div style={{ marginTop: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 500 }}>
                         <span className="muted">Ocupação: <strong>{headCount}</strong> cab.</span>
-                        <span style={{ color: pct > 95 ? "var(--red)" : "var(--brand)", fontWeight: 600 }}>{pct}%</span>
+                        <span style={{ color: headCount > cap ? "var(--red)" : pct > 85 ? "var(--amber)" : "var(--brand)", fontWeight: 700 }}>
+                          {headCount > cap ? `Sobrelotação (${Math.round((headCount / cap) * 100)}%)` : `${pct}%`}
+                        </span>
                       </div>
                       <div className="meter-bar">
-                        <div className={fillClass} style={{ width: `${pct}%` }} />
+                        <div className={fillClass} style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
+                      {headCount > cap && (
+                        <div style={{
+                          marginTop: 6,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: "rgba(201, 53, 53, 0.12)",
+                          border: "1px solid rgba(201, 53, 53, 0.3)",
+                          fontSize: 11,
+                          color: "var(--red)",
+                          fontWeight: 600
+                        }}>
+                          ⚠️ Alerta: Lotação ({headCount} cab.) acima da capacidade ({cap} cab.)
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -131,20 +164,40 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
                       Animais presentes: <strong>{headCount}</strong> cab.
                     </div>
                   )}
+
+                  {headCount === 0 && (
+                    <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                      <form action={deletePasture}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <button type="submit" className="btn ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--muted)" }}>
+                          Excluir Pasto
+                        </button>
+                      </form>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Cadastro de Novo Pasto */}
+        {/* Cadastro de Novo Pasto (Campos Obrigatórios, Recomendados e Opcionais do PDF) */}
         <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-secondary)" }}>+ Cadastrar Novo Pasto / Piquete</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>+ Cadastrar Novo Pasto / Piquete</span>
           <form action={createPasture} className="form2" style={{ marginTop: 10 }}>
-            <label>Identificação do Pasto *<input name="name" required placeholder="Ex: Piquete 04 - Mombaça" /></label>
+            <label>Identificação / Nome *<input name="name" required placeholder="Ex: Piquete 04 - Mombaça" /></label>
+            <label>
+              Tipo de Espaço *
+              <select name="type" required defaultValue="Pasto">
+                <option value="Pasto">Pasto / Piquete</option>
+                <option value="Curral">Curral de Manejo</option>
+                <option value="Confinamento">Confinamento / Piquete de Engorda</option>
+              </select>
+            </label>
+            <label>Tipo de Capim / Forrageira<input name="grass_type" placeholder="Ex: Mombaça, Braquiária Brizantha" /></label>
             <label>Área em Hectares (ha)<input name="area_ha" inputMode="decimal" placeholder="Ex: 12.5" /></label>
-            <label>Capacidade Recomendada (cabeças)<input name="capacity_heads" inputMode="numeric" placeholder="Ex: 35" /></label>
-            <label>Observações / Tipo de Pastagem<input name="notes" placeholder="Ex: Braquiária brizantha, bebedouro central" /></label>
+            <label>Capacidade (animais ou UA)<input name="capacity_heads" inputMode="numeric" placeholder="Ex: 35" /></label>
+            <label>Observações Adicionais<input name="notes" placeholder="Ex: Bebedouro australiano, sombra natural" /></label>
             <div style={{ alignSelf: "end" }}><button className="btn">Adicionar Pasto</button></div>
           </form>
         </div>
@@ -166,8 +219,9 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
                 <tr>
                   <th>Nome do Lote</th>
                   <th>Animais Alocados</th>
-                  <th>Observações / Finalidade</th>
+                  <th>Finalidade & Observações</th>
                   <th>Situação</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -187,6 +241,16 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
                           {l.status}
                         </span>
                       </td>
+                      <td style={{ textAlign: "right" }}>
+                        {count === 0 && (
+                          <form action={deleteLot} style={{ display: "inline" }}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <button type="submit" className="btn ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--muted)" }}>
+                              Excluir
+                            </button>
+                          </form>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -195,12 +259,22 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
           </div>
         )}
 
-        {/* Cadastro de Novo Lote */}
+        {/* Cadastro de Novo Lote (Campos Obrigatórios, Recomendados e Opcionais do PDF) */}
         <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-secondary)" }}>+ Criar Novo Lote de Manejo</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>+ Criar Novo Lote de Manejo</span>
           <form action={createLot} className="form2" style={{ marginTop: 10 }}>
             <label>Nome do Lote *<input name="name" required placeholder="Ex: Novilhas IATF 2026" /></label>
-            <label>Finalidade / Observações<input name="notes" placeholder="Ex: Suplementação mineral protéica" /></label>
+            <label>
+              Finalidade do Lote (Recomendado)
+              <select name="purpose" defaultValue="Recria">
+                <option value="Cria">Cria (Matrizes e Bezerros)</option>
+                <option value="Recria">Recria (Novilhas e Garrotes)</option>
+                <option value="Engorda">Engorda / Terminação</option>
+                <option value="Manejo Geral">Manejo Geral</option>
+              </select>
+            </label>
+            <label>Data de Formação do Lote<input name="formation_date" type="date" /></label>
+            <label>Observações / Manejo Nutricional<input name="notes" placeholder="Ex: Suplementação mineral protéica" /></label>
             <div style={{ alignSelf: "end" }}><button className="btn">Criar Lote</button></div>
           </form>
         </div>

@@ -1,17 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ReportBuilder from "@/components/ReportBuilder";
 import { parseDef, type Field } from "@/lib/reports";
 import { loadCustomCatalog } from "@/lib/catalog";
 
-export const instant = false;
 
 export default async function NewReportPage({ searchParams }: { searchParams: Promise<{ def?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -19,8 +16,8 @@ export default async function NewReportPage({ searchParams }: { searchParams: Pr
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "reports" };
 
   const supabase = await createClient();
-  const permsRes = await supabase.rpc("my_permissions", { p_farm: a.id });
-  if (!((permsRes.data as string[] | null) ?? []).includes("reports.builder")) {
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  if (!perms.includes("reports.builder")) {
     return (
       <AppShell {...shell}>
         <h1 className="title">Nova consulta</h1>

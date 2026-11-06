@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createProduct, registerHealth } from "./actions";
 
-export const instant = false;
 
 const ERR: Record<string, string> = {
   vazio: "Informe o produto, a data e os animais (brincos ou lote).",
@@ -22,7 +20,6 @@ export default async function HealthPage({
 }: {
   searchParams: Promise<{ ok?: string; erro?: string }>;
 }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -38,7 +35,7 @@ export default async function HealthPage({
   }
 
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("health.view")) {
     return (
       <AppShell {...shell}>
@@ -71,11 +68,16 @@ export default async function HealthPage({
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Controle Sanitário & Vacinas</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Gestão de protocolos profiláticos, vacinações em lote e períodos de carência
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Controle Sanitário & Vacinas
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Gestão de protocolos profiláticos, vacinações em lote e períodos de carência
+            </p>
+          </div>
         </div>
       </div>
 

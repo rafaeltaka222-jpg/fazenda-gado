@@ -1,13 +1,10 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 
-export const instant = false;
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().slice(0, 60);
   const ctx = await getContext();
@@ -29,7 +26,19 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Busca</h1>
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Resultados da Busca: "{q}"
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Pesquisa rápida em animais, brincos, lotes, pastagens e pessoas
+            </p>
+          </div>
+        </div>
+      </div>
       {q.length < 2 ? (
         <div className="card"><p className="muted">Digite pelo menos 2 caracteres na caixa de busca do topo.</p></div>
       ) : total === 0 ? (

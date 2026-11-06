@@ -1,0 +1,1597 @@
+Quero que você atue como um **arquiteto de software sênior, especialista em sistemas web, segurança da informação, gestão agropecuária, bancos de dados e integração entre sistemas**.
+
+Sua tarefa é desenvolver um **sistema web completo para gestão de fazendas de gado**, com foco em:
+
+- Segurança
+- Facilidade de uso
+- Confiabilidade
+- Escalabilidade
+- Rastreabilidade das informações
+- Facilidade de manutenção
+- Integração com outros sistemas
+- Geração de relatórios
+- Geração de tabelas e consultas personalizadas
+
+O sistema deverá ser desenvolvido com arquitetura profissional, pensando desde o início em um sistema que possa crescer para atender várias fazendas, usuários e grandes volumes de dados.
+
+---
+
+# 1. OBJETIVO DO SISTEMA
+
+O sistema deverá permitir o gerenciamento completo de propriedades rurais voltadas à criação de gado.
+
+A ideia é centralizar as informações da fazenda em um único sistema, permitindo controlar animais, lotes, pastagens, alimentação, pesagens, reprodução, movimentações, estoque, custos, usuários, relatórios, contas a receber, contas a pagar e demais informações necessárias para a gestão da propriedade.
+
+O sistema deverá funcionar via navegador, sendo responsivo para:
+
+- Computadores
+- Notebooks
+- Tablets
+- Celulares
+
+A interface deverá ser simples e intuitiva, permitindo que usuários com pouca experiência em informática consigam utilizar o sistema.
+
+---
+
+# 2. PRINCÍPIO FUNDAMENTAL
+
+Antes de começar a escrever código, faça primeiro:
+
+1. Levantamento dos requisitos
+2. Definição dos módulos
+3. Definição das entidades do banco de dados
+4. Modelagem do banco de dados
+5. Definição da arquitetura do sistema
+6. Definição da estratégia de segurança
+7. Definição da estratégia de integração
+8. Definição da estrutura de permissões
+9. Definição da estrutura de relatórios
+10. Definição da estrutura do gerador de tabelas
+11. Definição da estrutura de auditoria
+12. Definição da estratégia de backup e recuperação
+
+Apresente essa arquitetura antes de iniciar a implementação.
+
+Não quero um projeto criado de forma improvisada.
+
+---
+
+# 3. ARQUITETURA
+
+Escolha uma arquitetura moderna, segura e de fácil manutenção.
+
+Priorize:
+
+- Separação clara entre frontend e backend
+- API REST
+- Banco de dados relacional
+- Código modular
+- Serviços independentes quando fizer sentido
+- Validação de dados no frontend e backend
+- Controle de permissões no backend
+- Logs
+- Auditoria
+- Tratamento adequado de erros
+- Configurações por ambiente
+- Desenvolvimento preparado para produção
+
+Explique por que escolheu cada tecnologia.
+
+Caso tenha liberdade para escolher a stack, apresente uma recomendação antes da implementação.
+
+A arquitetura deve permitir futuramente:
+
+- Aplicativo Android
+- Aplicativo iOS
+- Integração com ERP
+- Integração com balanças
+- Integração com sistemas financeiros
+- Integração com sistemas de identificação animal
+- Integração com APIs externas
+- Integração via arquivos TXT, CSV, XML e JSON
+
+---
+
+# 4. SEGURANÇA
+
+A segurança é uma das prioridades máximas do projeto.
+
+Implemente o sistema seguindo boas práticas modernas de segurança e, quando aplicável, as recomendações do OWASP.
+
+O sistema deverá possuir:
+
+### Autenticação
+
+- Login seguro
+- Senhas armazenadas utilizando hash forte
+- Nunca armazenar senha em texto puro
+- Controle de sessão
+- Expiração de sessão
+- Logout seguro
+- Proteção contra brute force
+- Rate limiting
+- Recuperação de senha segura
+- Possibilidade de autenticação em dois fatores (2FA)
+- Controle de dispositivos/sessões ativas
+
+### Autorização
+
+Criar um sistema robusto de permissões.
+
+Exemplo:
+
+Administrador
+Gerente
+Veterinário
+Zootecnista
+Funcionário
+Operador
+Visualização
+
+As permissões devem poder ser configuradas por:
+
+- Módulo
+- Tela
+- Operação
+- Criar
+- Visualizar
+- Editar
+- Excluir
+- Exportar
+- Imprimir
+- Importar
+
+Não confiar apenas nas restrições do frontend.
+
+Toda autorização deverá ser validada também no backend.
+
+### Proteções
+
+Implementar proteção contra:
+
+- SQL Injection
+- XSS
+- CSRF
+- Brute Force
+- Session Hijacking
+- IDOR
+- Upload de arquivos maliciosos
+- Manipulação de parâmetros
+- Escalada de privilégios
+- Mass Assignment
+- Vazamento de informações
+- Enumeração de usuários
+- Ataques de força bruta
+- Replay de requisições quando aplicável
+
+Utilizar:
+
+- HTTPS
+- Headers de segurança
+- Cookies seguros quando utilizados
+- CORS corretamente configurado
+- CSP quando aplicável
+- Rate limiting
+- Validação de entrada
+- Sanitização
+- Prepared Statements/ORM seguro
+- Gestão segura de secrets
+
+Nunca deixar:
+
+- Senhas
+- Tokens
+- Chaves de API
+- Credenciais do banco
+- Secrets
+
+diretamente no código-fonte.
+
+Utilizar variáveis de ambiente e/ou gerenciamento apropriado de secrets.
+
+---
+
+# 5. AUDITORIA
+
+O sistema deverá possuir uma área de auditoria.
+
+Registrar operações importantes, incluindo:
+
+- Usuário
+- Data
+- Hora
+- IP
+- Operação
+- Módulo
+- Registro afetado
+- Valor anterior
+- Novo valor
+- Origem da operação
+
+Exemplo:
+
+Usuário João alterou o peso do animal 000123 de 412 kg para 425 kg.
+
+A auditoria deverá ser protegida contra alterações indevidas por usuários comuns.
+
+---
+
+# 6. MULTI-FAZENDA
+
+O sistema deverá ser preparado para trabalhar com várias propriedades.
+
+Um usuário poderá ter acesso a:
+
+- Uma fazenda
+- Várias fazendas
+
+Os dados deverão ser isolados corretamente entre as propriedades.
+
+Um usuário de uma fazenda nunca poderá visualizar dados de outra fazenda sem possuir autorização.
+
+Estruture o banco pensando em multi-tenant.
+
+---
+
+# 7. CADASTROS PRINCIPAIS
+
+Criar inicialmente os seguintes cadastros:
+
+### Fazenda
+
+- Código
+- Nome
+- Razão social
+- CNPJ/CPF
+- Inscrição
+- Endereço
+- Município
+- Estado
+- Coordenadas
+- Área
+- Observações
+
+### Pessoas
+
+- Funcionários
+- Proprietários
+- Veterinários
+- Zootecnistas
+- Fornecedores
+- Compradores
+- Transportadores
+
+### Animais
+
+Cada animal deverá possuir identificação única.
+
+Campos sugeridos:
+
+- ID interno
+- Brinco
+- Identificação eletrônica
+- Nome
+- Sexo
+- Raça
+- Data de nascimento
+- Origem
+- Pai
+- Mãe
+- Peso
+- Status
+- Categoria
+- Lote
+- Pasto
+- Data de entrada
+- Data de saída
+- Observações
+
+O sistema deverá permitir histórico completo do animal.
+
+---
+
+# 8. HISTÓRICO DO ANIMAL
+
+Cada animal deverá possuir uma ficha completa.
+
+Exemplo:
+
+Animal 001234
+
+Mostrar:
+
+- Dados cadastrais
+- Genealogia
+- Pesagens
+- Vacinas
+- Medicamentos
+- Doenças
+- Tratamentos
+- Reprodução
+- Partos
+- Movimentações
+- Lotes
+- Pastagens
+- Alimentação
+- Compras
+- Vendas
+- Custos
+- Eventos
+- Histórico completo
+
+Nenhuma informação histórica importante deverá ser simplesmente sobrescrita.
+
+---
+
+# 9. MANEJO DO GADO
+
+Criar módulos para:
+
+- Entrada de animais
+- Saída
+- Transferência
+- Compra
+- Venda
+- Mortandade
+- Nascimento
+- Transferência entre lotes
+- Transferência entre pastos
+- Inventário
+- Contagem do rebanho
+
+Toda movimentação deverá gerar histórico.
+
+---
+
+# 10. PESAGEM
+
+Criar módulo completo de pesagem.
+
+Deverá permitir:
+
+- Lançamento manual
+- Importação de arquivo
+- Integração com balança
+- API
+
+Exemplo de arquivo TXT:
+
+```text
+BRINCO;DATA;HORA;PESO
+000123;20/10/2026;08:32;425
+000124;20/10/2026;08:33;412
+000125;20/10/2026;08:34;438
+```
+
+O sistema deverá possuir um **importador configurável**.
+
+O usuário deverá conseguir configurar:
+
+- Separador
+- Ordem das colunas
+- Formato da data
+- Formato decimal
+- Campos obrigatórios
+- Identificador do animal
+- Regras de validação
+
+Antes de gravar definitivamente, mostrar uma **prévia dos dados importados**.
+
+Exemplo:
+
+| Brinco | Data | Hora | Peso | Situação |
+|---|---|---|---:|---|
+| 000123 | 20/10/2026 | 08:32 | 425 | OK |
+| 000124 | 20/10/2026 | 08:33 | 412 | OK |
+| 000125 | 20/10/2026 | 08:34 | 438 | OK |
+
+Erros deverão ser apresentados antes da importação.
+
+---
+
+# 11. INTEGRAÇÃO COM BALANÇAS
+
+Criar uma camada de integração que permita futuramente conectar diferentes modelos de balança.
+
+A arquitetura deverá suportar:
+
+- TXT
+- CSV
+- JSON
+- XML
+- API REST
+- Webhooks
+- Comunicação por arquivo
+- Outros formatos quando necessário
+
+Criar uma arquitetura baseada em "adaptadores" ou "drivers de integração".
+
+Exemplo:
+
+Balança A → Adaptador A → Sistema
+
+Balança B → Adaptador B → Sistema
+
+Balança C → API → Sistema
+
+Assim, a troca de uma balança não deverá exigir alterações profundas no sistema.
+
+Registrar logs de todas as importações.
+
+---
+
+# 12. GERADOR DE RELATÓRIOS
+
+Este é um requisito obrigatório.
+
+Criar um **gerador de relatórios dinâmico**.
+
+O usuário deverá conseguir selecionar:
+
+- Fonte de dados
+- Campos
+- Filtros
+- Ordenação
+- Agrupamento
+- Totalizadores
+- Subtotais
+- Período
+- Fazenda
+- Categoria
+- Lote
+- Animal
+- Raça
+- Sexo
+
+Permitir gerar:
+
+- PDF
+- Excel
+- CSV
+- Impressão
+
+Exemplos:
+
+Relatório de estoque do rebanho.
+
+Relatório de pesagens.
+
+Relatório de ganho de peso.
+
+Relatório de mortalidade.
+
+Relatório de vacinação.
+
+Relatório de medicamentos.
+
+Relatório de reprodução.
+
+Relatório de vendas.
+
+Relatório de compras.
+
+Relatório de custos.
+
+Relatório de movimentação.
+
+Relatório de animais por lote.
+
+Relatório de animais por pasto.
+
+---
+
+# 13. GERADOR DE TABELAS
+
+Também deverá existir um **gerador de tabelas/consultas personalizadas**.
+
+O usuário poderá escolher:
+
+Fonte:
+
+Animais
+
+Pesagens
+
+Movimentações
+
+Vacinas
+
+Medicamentos
+
+Reprodução
+
+Vendas
+
+Compras
+
+etc.
+
+Depois poderá escolher os campos:
+
+- Brinco
+- Nome
+- Sexo
+- Raça
+- Peso
+- Data
+- Lote
+- Pasto
+- etc.
+
+Permitir:
+
+- Filtros
+- Ordenação
+- Agrupamento
+- Soma
+- Média
+- Mínimo
+- Máximo
+- Contagem
+- Percentuais
+- Campos calculados
+
+Exemplo:
+
+"Mostrar todos os animais machos da raça Nelore, com peso acima de 400 kg, pertencentes ao lote 10."
+
+O usuário deverá conseguir salvar essa consulta.
+
+Exemplo:
+
+**Minhas consultas**
+
+- Animais acima de 400 kg
+- Vacinas vencendo
+- Fêmeas em reprodução
+- Animais sem pesagem há 60 dias
+- Estoque por lote
+
+---
+
+# 14. DASHBOARD
+
+Criar dashboard inicial.
+
+Mostrar informações como:
+
+- Total de animais
+- Machos
+- Fêmeas
+- Bezerros
+- Novilhas
+- Touros
+- Animais vendidos
+- Nascimentos
+- Mortes
+- Peso médio
+- Ganho médio de peso
+- Alertas
+- Vacinas próximas do vencimento
+- Eventos próximos
+- Indicadores financeiros
+
+Os widgets deverão respeitar as permissões do usuário.
+
+---
+
+# 15. ALERTAS
+
+Criar sistema de alertas.
+
+Exemplos:
+
+- Vacinação próxima
+- Vacinação atrasada
+- Animal sem pesagem
+- Animal abaixo do ganho esperado
+- Estoque baixo
+- Medicamento vencendo
+- Animal próximo de período reprodutivo
+- Tarefas pendentes
+
+Permitir futuramente notificações por:
+
+- Sistema
+- E-mail
+- WhatsApp
+- Push
+
+---
+
+# 16. BANCO DE DADOS
+
+Criar um banco relacional profissional.
+
+Antes da implementação, apresente:
+
+- Diagrama ER
+- Tabelas
+- Campos
+- Chaves primárias
+- Chaves estrangeiras
+- Índices
+- Constraints
+- Relacionamentos
+- Estratégia de auditoria
+- Estratégia de multi-tenant
+
+Evitar duplicidade de informações.
+
+Criar índices pensando no desempenho.
+
+Utilizar transações nas operações críticas.
+
+---
+
+# 17. API
+
+O sistema deverá possuir API própria.
+
+Criar uma API REST versionada.
+
+Exemplo:
+
+/api/v1/animals
+
+/api/v1/weighings
+
+/api/v1/farms
+
+/api/v1/lots
+
+/api/v1/movements
+
+etc.
+
+A API deverá possuir:
+
+- Autenticação
+- Autorização
+- Rate limiting
+- Logs
+- Versionamento
+- Validação
+- Paginação
+- Filtros
+- Ordenação
+
+Criar documentação utilizando OpenAPI/Swagger.
+
+---
+
+# 18. IMPORTAÇÃO E EXPORTAÇÃO
+
+Criar um módulo específico de integração.
+
+Permitir:
+
+### Importação
+
+- TXT
+- CSV
+- Excel
+- XML
+- JSON
+- API
+
+### Exportação
+
+- TXT
+- CSV
+- Excel
+- PDF
+- JSON
+
+O sistema deverá possuir um histórico das importações e exportações.
+
+---
+
+# 19. IMPORTADOR CONFIGURÁVEL
+
+O usuário deverá poder criar layouts de importação.
+
+Exemplo:
+
+Layout:
+
+**Balança Eletrônica Modelo X**
+
+Arquivo:
+
+```text
+BRINCO;DATA;HORA;PESO
+```
+
+Mapeamento:
+
+BRINCO → Animal.identificacao
+
+DATA → Pesagem.data
+
+HORA → Pesagem.hora
+
+PESO → Pesagem.peso
+
+O sistema deverá validar os dados antes da gravação.
+
+Se uma linha apresentar erro:
+
+```text
+Linha 17:
+Animal 000789 não encontrado.
+```
+
+Permitir corrigir ou ignorar a linha.
+
+---
+
+# 20. USABILIDADE
+
+A interface deve ser extremamente simples.
+
+Priorizar:
+
+- Menos cliques
+- Menus claros
+- Pesquisa rápida
+- Atalhos
+- Botões grandes para operações de campo
+- Responsividade
+- Feedback visual
+- Mensagens de erro compreensíveis
+- Confirmação antes de operações críticas
+
+Evitar telas excessivamente complexas.
+
+---
+
+# 21. OPERAÇÕES EM LOTE
+
+O sistema deverá permitir operações em massa.
+
+Exemplos:
+
+Selecionar 50 animais e:
+
+- Transferir lote
+- Alterar pasto
+- Registrar vacinação
+- Registrar pesagem
+- Alterar categoria
+
+Sempre mostrar uma confirmação antes da execução.
+
+Operações críticas deverão utilizar transação.
+
+---
+
+# 22. DESEMPENHO
+
+O sistema deve ser preparado para grandes volumes.
+
+Não assumir que haverá somente algumas centenas de animais.
+
+Projetar para poder trabalhar futuramente com:
+
+- 1.000 animais
+- 10.000 animais
+- 100.000 animais
+- Várias fazendas
+
+Utilizar:
+
+- Paginação
+- Índices
+- Cache quando necessário
+- Consultas otimizadas
+- Processamento assíncrono para tarefas pesadas
+- Filas quando necessário
+
+Nunca carregar milhares de registros desnecessariamente no navegador.
+
+---
+
+# 23. BACKUP E RECUPERAÇÃO
+
+Criar estratégia de:
+
+- Backup automático
+- Backup incremental quando aplicável
+- Retenção
+- Restauração
+- Teste de restauração
+- Backup externo
+- Plano de recuperação
+
+O sistema deverá possuir documentação de recuperação em caso de falha.
+
+---
+
+# 24. LOGS
+
+Criar logs estruturados para:
+
+- Login
+- Logout
+- Erros
+- API
+- Importações
+- Exportações
+- Integrações
+- Alterações críticas
+- Falhas de autenticação
+
+Nunca registrar senhas ou informações secretas nos logs.
+
+---
+
+# 25. CONFIGURAÇÕES
+
+Criar uma área administrativa para configurar:
+
+- Fazenda
+- Usuários
+- Perfis
+- Permissões
+- Categorias
+- Raças
+- Lotes
+- Pastos
+- Tipos de movimentação
+- Tipos de eventos
+- Integrações
+- Layouts de importação
+- Parâmetros do sistema
+
+---
+
+# 26. EXPERIÊNCIA DO USUÁRIO
+
+O sistema deverá ter aparência profissional.
+
+Criar:
+
+- Menu lateral
+- Dashboard
+- Breadcrumbs
+- Busca global
+- Tabelas responsivas
+- Filtros avançados
+- Paginação
+- Ordenação
+- Modais quando apropriado
+- Formulários organizados
+- Indicadores visuais
+
+O design deve ser limpo e moderno, sem excesso de elementos.
+
+---
+
+# 27. TRATAMENTO DE ERROS
+
+Nunca mostrar erros técnicos diretamente para o usuário.
+
+Exemplo ruim:
+
+"SQLSTATE[23000]..."
+
+Exemplo correto:
+
+"Não foi possível salvar o animal. Verifique os dados informados."
+
+O erro técnico deve ser registrado nos logs para diagnóstico.
+
+---
+
+# 28. CONFIRMAÇÃO DE OPERAÇÕES CRÍTICAS
+
+Para operações como:
+
+- Excluir animal
+- Excluir pesagem
+- Excluir movimentação
+- Alterar dados históricos
+- Cancelar venda
+
+pedir confirmação.
+
+Para dados que não devem ser realmente apagados, preferir:
+
+**soft delete**
+
+mantendo o histórico.
+
+---
+
+# 29. CONTROLE DE CONCORRÊNCIA
+
+Pensar em situações em que dois usuários alteram o mesmo registro simultaneamente.
+
+Implementar mecanismos adequados para evitar perda silenciosa de dados.
+
+---
+
+# 30. LGPD
+
+O sistema deverá considerar a LGPD.
+
+Implementar:
+
+- Controle de acesso
+- Minimização de dados
+- Auditoria
+- Proteção de dados pessoais
+- Política de retenção
+- Controle de exportação
+- Segurança dos dados
+- Registro de operações relevantes
+
+---
+
+# 31. TESTES
+
+Não entregar apenas o código.
+
+Criar testes:
+
+- Unitários
+- Integração
+- API
+- Autenticação
+- Autorização
+- Importação
+- Relatórios
+- Operações críticas
+
+Também realizar testes de segurança básicos.
+
+---
+
+# 32. DOCUMENTAÇÃO
+
+Criar documentação do projeto.
+
+Incluir:
+
+- Arquitetura
+- Instalação
+- Configuração
+- Banco de dados
+- API
+- Variáveis de ambiente
+- Deploy
+- Backup
+- Restauração
+- Segurança
+- Integrações
+- Importação de arquivos
+- Criação de relatórios
+- Administração do sistema
+
+---
+
+# 33. DEPLOY
+
+O projeto deverá ser preparado para:
+
+- Ambiente de desenvolvimento
+- Homologação
+- Produção
+
+Não colocar credenciais de produção no código.
+
+Criar arquivo `.env.example`.
+
+Explicar como fazer o deploy.
+
+---
+
+# 34. ESTRUTURA DO PROJETO
+
+Mantenha o projeto organizado.
+
+Separar claramente:
+
+Frontend
+
+Backend
+
+Banco de dados
+
+API
+
+Serviços
+
+Integrações
+
+Relatórios
+
+Autenticação
+
+Auditoria
+
+Testes
+
+Documentação
+
+Não criar um projeto monolítico desorganizado.
+
+---
+
+# 35. REQUISITO IMPORTANTE SOBRE CÓDIGO
+
+Não quero apenas uma demonstração visual.
+
+Quero um sistema funcional.
+
+Não utilize dados falsos como substituto das funcionalidades reais.
+
+Se alguma funcionalidade ainda não puder ser implementada, deixe claramente indicado:
+
+`TODO`
+
+e explique o que falta.
+
+Não simule uma API dizendo que ela está funcionando.
+
+Não simule uma integração com balança dizendo que está funcionando.
+
+---
+
+# 36. DESENVOLVIMENTO POR ETAPAS
+
+Não tente criar tudo de uma vez.
+
+Divida o desenvolvimento em etapas.
+
+### ETAPA 1
+
+Arquitetura
+
+Banco de dados
+
+Autenticação
+
+Usuários
+
+Perfis
+
+Permissões
+
+Fazendas
+
+Auditoria
+
+### ETAPA 2
+
+Animais
+
+Lotes
+
+Pastos
+
+Movimentações
+
+Histórico
+
+### ETAPA 3
+
+Pesagens
+
+Importação TXT/CSV
+
+Importador configurável
+
+Integração com balança
+
+### ETAPA 4
+
+Relatórios
+
+Gerador de tabelas
+
+Consultas personalizadas
+
+Exportações
+
+### ETAPA 5
+
+Dashboard
+
+Indicadores
+
+Alertas
+
+### ETAPA 6
+
+API
+
+Integrações externas
+
+Webhooks
+
+### ETAPA 7
+
+Testes
+
+Segurança
+
+Performance
+
+Backup
+
+Deploy
+
+Documentação
+
+---
+
+# 37. REGRA IMPORTANTE PARA O DESENVOLVIMENTO
+
+Antes de implementar cada etapa:
+
+1. Explique o que será desenvolvido.
+2. Mostre a estrutura dos arquivos.
+3. Mostre as alterações no banco.
+4. Explique os riscos.
+5. Implemente.
+6. Teste.
+7. Informe o que foi testado.
+8. Informe possíveis problemas.
+9. Só então avance para a próxima etapa.
+
+Não altere a arquitetura principal sem explicar o motivo.
+
+---
+
+# 38. TECNOLOGIAS
+
+Você poderá escolher as tecnologias, mas deverá justificar tecnicamente cada escolha.
+
+Priorize tecnologias:
+
+- Maduras
+- Bem documentadas
+- Seguras
+- Com comunidade ativa
+- Fáceis de encontrar profissionais
+- Adequadas para aplicações empresariais
+
+Para cada tecnologia escolhida, explique:
+
+- Por que utilizar
+- Vantagens
+- Desvantagens
+- Alternativas consideradas
+
+---
+
+# 39. RESULTADO ESPERADO
+
+No final quero possuir um sistema web profissional de gestão de fazendas de gado que permita:
+
+- Gerenciar propriedades
+- Gerenciar usuários
+- Controlar permissões
+- Gerenciar animais
+- Gerenciar lotes
+- Gerenciar pastos
+- Controlar movimentações
+- Controlar pesagens
+- Importar dados de balanças
+- Integrar com sistemas externos
+- Criar relatórios personalizados
+- Criar tabelas personalizadas
+- Criar consultas personalizadas
+- Exportar informações
+- Auditar alterações
+- Visualizar indicadores
+- Receber alertas
+- Utilizar API
+- Trabalhar com múltiplas fazendas
+- Crescer futuramente para aplicativo mobile
+
+---
+
+# 40. PRIMEIRO PASSO
+
+NÃO comece programando imediatamente.
+
+Primeiro faça uma análise completa do projeto.
+
+Entregue:
+
+1. Arquitetura recomendada
+2. Stack tecnológica recomendada
+3. Diagrama geral do sistema
+4. Modelo inicial do banco de dados
+5. Lista de módulos
+6. Sistema de permissões
+7. Estratégia de segurança
+8. Estratégia de auditoria
+9. Estratégia de integração com balanças
+10. Estratégia do gerador de relatórios
+11. Estratégia do gerador de tabelas
+12. Estratégia de API
+13. Estratégia de backup
+14. Estratégia de deploy
+15. Estrutura de pastas do projeto
+16. Roadmap de desenvolvimento
+
+Depois disso, aguarde minha aprovação para iniciar a implementação.
+
+IMPORTANTE:
+
+Quero que você pense neste projeto como um **sistema empresarial que será utilizado por muitos anos**, e não como um simples projeto de demonstração.
+
+Priorize **segurança, confiabilidade, rastreabilidade, facilidade de uso e capacidade de evolução**.
+
+# 40. CONFIGURAÇÃO DINÂMICA DE CAMPOS E CADASTROS
+
+O sistema deverá possuir uma estrutura que permita **configurar e personalizar campos dos cadastros sem necessidade de alterar o código-fonte principal da aplicação**.
+
+Esse recurso deverá ser desenvolvido pensando em flexibilidade, mas sem comprometer a segurança, integridade ou performance do banco de dados.
+
+## 40.1 Campos personalizados
+
+Permitir que um administrador crie campos adicionais para determinados cadastros.
+
+Exemplo:
+
+Cadastro de Animal:
+
+Campos padrão:
+
+- Brinco
+- Sexo
+- Raça
+- Data de nascimento
+- Peso
+- Lote
+- Pasto
+
+O administrador poderá adicionar:
+
+- Número do SISBOV
+- Origem
+- Classificação genética
+- Código interno
+- Característica adicional
+- Observação específica
+
+O administrador deverá conseguir definir:
+
+- Nome do campo
+- Descrição
+- Tipo de dado
+- Obrigatório ou opcional
+- Valor padrão
+- Tamanho máximo
+- Casas decimais
+- Máscara
+- Opções disponíveis
+- Ordem de exibição
+- Se aparece em consultas
+- Se aparece em relatórios
+- Se pode ser utilizado como filtro
+- Se pode ser utilizado em ordenação
+- Se pode ser utilizado em agrupamento
+
+## 40.2 Tipos de campos
+
+Suportar pelo menos:
+
+- Texto
+- Texto longo
+- Número inteiro
+- Número decimal
+- Data
+- Data e hora
+- Hora
+- Sim/Não
+- Lista de opções
+- Lista múltipla
+- Valor monetário
+- Percentual
+- E-mail
+- Telefone
+- CPF/CNPJ
+- Campo de referência para outro cadastro
+
+Exemplo:
+
+Campo:
+
+`Categoria genética`
+
+Tipo:
+
+`Lista`
+
+Opções:
+
+- Nelore PO
+- Nelore LA
+- Angus
+- Brangus
+- Cruzado
+
+---
+
+## 40.3 Campos condicionais
+
+Quando fizer sentido, permitir campos condicionais.
+
+Exemplo:
+
+Se:
+
+`Sexo = Fêmea`
+
+mostrar:
+
+- Data do primeiro cio
+- Número de partos
+- Data do último parto
+- Situação reprodutiva
+
+Se:
+
+`Sexo = Macho`
+
+mostrar:
+
+- Data da entrada em reprodução
+- Exame andrológico
+- Situação reprodutiva
+
+---
+
+## 40.4 Cadastros personalizados
+
+A arquitetura deverá permitir futuramente a criação de novos tipos de cadastro sem necessidade de desenvolver uma tela completamente nova do zero.
+
+Exemplo:
+
+O administrador poderá criar um cadastro chamado:
+
+**Equipamentos**
+
+Campos:
+
+- Código
+- Descrição
+- Marca
+- Modelo
+- Número de série
+- Data de aquisição
+- Valor
+- Localização
+- Status
+
+Outro exemplo:
+
+**Implementos agrícolas**
+
+Campos:
+
+- Código
+- Descrição
+- Fabricante
+- Modelo
+- Ano
+- Horímetro
+- Status
+- Observações
+
+Esses cadastros deverão poder participar, quando configurado, de:
+
+- Relatórios
+- Tabelas
+- Filtros
+- Consultas
+- Exportações
+- Auditoria
+
+---
+
+## 40.5 Gerador de telas
+
+Sempre que possível, utilizar uma arquitetura orientada a metadados para que os formulários sejam construídos dinamicamente a partir da configuração dos campos.
+
+Por exemplo:
+
+```text
+Cadastro: Animal
+
+Campo              Tipo          Obrigatório
+------------------------------------------------
+Brinco              Texto         SIM
+Sexo                Lista         SIM
+Raça                Lista         SIM
+Nascimento          Data          SIM
+Peso                Decimal       NÃO
+Lote                Referência    NÃO
+SISBOV              Texto         NÃO
+Observação          Texto longo   NÃO
+```
+
+O sistema deverá gerar automaticamente o formulário correspondente.
+
+---
+
+## 40.6 Segurança
+
+Campos e cadastros configuráveis NÃO podem permitir que um administrador comum execute código arbitrário, SQL ou scripts no servidor.
+
+Nunca permitir:
+
+- SQL livre
+- JavaScript livre
+- HTML executável
+- Scripts
+- Comandos do sistema operacional
+
+As configurações deverão utilizar estruturas controladas pelo sistema.
+
+---
+
+## 40.7 Banco de dados
+
+Antes de implementar esse mecanismo, analisar cuidadosamente a melhor estratégia.
+
+Comparar, quando aplicável:
+
+- Colunas tradicionais
+- Tabelas de atributos
+- EAV
+- JSON/JSONB
+- Metadados + estrutura híbrida
+
+Escolher a solução que ofereça o melhor equilíbrio entre:
+
+- Segurança
+- Performance
+- Flexibilidade
+- Integridade
+- Consultas
+- Relatórios
+- Indexação
+- Manutenção
+
+Não utilizar EAV automaticamente apenas por ser flexível.
+
+Justificar tecnicamente a escolha.
+
+---
+
+## 40.8 Integração com o gerador de relatórios
+
+Campos personalizados deverão poder ser utilizados no gerador de relatórios.
+
+Exemplo:
+
+O administrador criou:
+
+`Peso ao desmame`
+
+Esse campo deverá poder aparecer em:
+
+- Relatório
+- Tabela personalizada
+- Filtro
+- Ordenação
+- Agrupamento
+- Exportação
+
+---
+
+## 40.9 Integração com o gerador de tabelas
+
+Campos personalizados também deverão aparecer automaticamente como opções no gerador de tabelas.
+
+Exemplo:
+
+Fonte:
+
+`Animais`
+
+Campos disponíveis:
+
+- Brinco
+- Raça
+- Sexo
+- Peso
+- Lote
+- Pasto
+- Peso ao desmame
+- Classificação genética
+
+O usuário poderá montar sua própria tabela.
+
+---
+
+## 40.10 Controle de alterações
+
+Alterações na estrutura dos campos deverão ser auditadas.
+
+Registrar:
+
+- Usuário
+- Data
+- Hora
+- Campo criado
+- Campo alterado
+- Configuração anterior
+- Nova configuração
+
+Não permitir que alterações estruturais apaguem silenciosamente dados já cadastrados.
+
+Por exemplo:
+
+Se o administrador criar:
+
+`Número do SISBOV`
+
+e posteriormente desativar o campo, os dados históricos deverão permanecer preservados.
+
+---
+
+## 40.11 Ativação e desativação
+
+Os campos deverão possuir status:
+
+- Ativo
+- Inativo
+
+Ao desativar um campo:
+
+- Não mostrar nos novos formulários
+- Não permitir novos lançamentos
+- Preservar os dados existentes
+- Continuar permitindo consulta histórica
+- Manter os dados disponíveis para auditoria e relatórios, conforme permissões
+
+---
+
+## 40.12 Permissões
+
+Campos sensíveis poderão possuir controle de acesso.
+
+Exemplo:
+
+O campo:
+
+`Valor de compra`
+
+poderá ser visualizado apenas por:
+
+- Administrador
+- Gerente
+
+Enquanto um funcionário comum poderá visualizar os demais dados do animal sem visualizar esse valor.
+
+Portanto, considerar permissões também em nível de campo quando tecnicamente justificável.
+
+---
+
+## 40.13 Princípio arquitetural
+
+A funcionalidade de campos e cadastros configuráveis deverá ser planejada desde o início da arquitetura.
+
+Não implementar como um recurso improvisado posteriormente.
+
+A solução deverá ser compatível com:
+
+- Gerador de relatórios
+- Gerador de tabelas
+- API
+- Importação
+- Exportação
+- Auditoria
+- Multi-fazenda
+- Controle de permissões
+- Aplicativo mobile futuro
+
+Antes de implementar, apresentar a arquitetura escolhida e explicar como os campos configuráveis serão armazenados, validados, consultados, indexados, auditados e disponibilizados pela API.

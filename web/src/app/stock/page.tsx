@@ -1,11 +1,9 @@
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createItem, registerStock, voidStock } from "./actions";
 
-export const instant = false;
 
 const ERR: Record<string, string> = {
   perm: "Você não tem permissão para esta operação.",
@@ -21,7 +19,6 @@ const money = (v: number | null) => (v == null ? "—" : Number(v).toLocaleStrin
 const fmtDate = (d: string) => d.split("-").reverse().join("/");
 
 export default async function StockPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -35,7 +32,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     );
   }
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("inventory.view")) {
     return (
       <AppShell {...shell}>
@@ -61,13 +58,33 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Estoque</h1>
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Nutrição & Estoque de Insumos
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Controle de ração concentrada, sal mineral, suplementos e medicamentos
+            </p>
+          </div>
+        </div>
+      </div>
       {sp.ok && <div className="flash">Operação concluída.</div>}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
 
       <div className="grid">
-        <div className="card"><small className="muted">Itens abaixo do mínimo</small><div className="big">{al.low}</div></div>
-        <div className="card"><small className="muted">Itens com validade em até 30 dias</small><div className="big">{al.expiring}</div></div>
+        <div className="card" style={{ borderLeft: "4px solid #ef4444" }}>
+          <small className="muted" style={{ fontWeight: 600 }}>Itens abaixo do mínimo</small>
+          <div className="big" style={{ color: al.low > 0 ? "var(--red)" : "var(--ink)", fontSize: 28, fontWeight: 800 }}>{al.low}</div>
+          <small className="muted">Necessitam reposição imediata</small>
+        </div>
+        <div className="card" style={{ borderLeft: "4px solid #f59e0b" }}>
+          <small className="muted" style={{ fontWeight: 600 }}>Itens com validade em até 30 dias</small>
+          <div className="big" style={{ color: al.expiring > 0 ? "var(--amber)" : "var(--ink)", fontSize: 28, fontWeight: 800 }}>{al.expiring}</div>
+          <small className="muted">Monitoramento de expiração</small>
+        </div>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>

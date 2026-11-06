@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { cancelImport, confirmImport } from "../actions";
-
-export const instant = false;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHOW = 1000;
@@ -30,11 +27,7 @@ export default async function ImportBatchPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ erro?: string; ok?: string }>;
 }) {
-  await connection();
-  const { id } = await params;
-  const sp = await searchParams;
-  if (!UUID.test(id)) notFound();
-  const ctx = await getContext();
+  const [{ id }, sp, ctx] = await Promise.all([params, searchParams, getContext()]);
   const a = ctx.active;
   if (!a) notFound();
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "import" };

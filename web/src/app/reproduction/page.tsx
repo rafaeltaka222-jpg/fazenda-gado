@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { registerBirthAction, registerEvent, voidReproduction } from "./actions";
 
-export const instant = false;
 
 const ST: Record<string, string> = { sem_registro: "Sem registro", servida: "Servida", prenha: "Prenha", vazia: "Vazia", parida: "Parida" };
 const TYPE: Record<string, string> = { cobertura: "Cobertura", inseminacao: "Inseminação", diagnostico: "Diagnóstico", parto: "Parto", aborto: "Aborto" };
@@ -25,7 +23,6 @@ export default async function ReproductionPage({
 }: {
   searchParams: Promise<{ ok?: string; erro?: string; st?: string }>;
 }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -39,7 +36,7 @@ export default async function ReproductionPage({
     );
   }
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("reproduction.view")) {
     return (
       <AppShell {...shell}>
@@ -79,11 +76,16 @@ export default async function ReproductionPage({
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Central de Reprodução & IATF</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Controle de coberturas, inseminações, diagnóstico de gestação e partos
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Central de Reprodução & IATF
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Controle de coberturas, inseminações, diagnóstico de gestação e partos
+            </p>
+          </div>
         </div>
       </div>
 

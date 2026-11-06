@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -7,7 +6,6 @@ import SelectAll from "@/components/SelectAll";
 import ConfirmButton from "@/components/ConfirmButton";
 import { moveAnimals } from "./actions";
 
-export const instant = false;
 const PAGE = 50;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—");
@@ -25,9 +23,7 @@ export default async function HerdPage({
     erro?: string;
   }>;
 }) {
-  await connection();
-  const sp = await searchParams;
-  const ctx = await getContext();
+  const [sp, ctx] = await Promise.all([searchParams, getContext()]);
   const a = ctx.active;
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "herd" };
 
@@ -65,10 +61,30 @@ export default async function HerdPage({
     supabase.from("categories").select("id, name").eq("farm_id", a.id),
   ]);
 
+  const pageAnimalIds = (animals.data ?? []).map((x: any) => x.id);
+  const weighRes = pageAnimalIds.length > 0
+    ? await supabase
+        .from("weighings")
+        .select("animal_id, weight_kg, weighed_at")
+        .eq("farm_id", a.id)
+        .in("animal_id", pageAnimalIds)
+        .is("voided_at", null)
+        .order("weighed_at", { ascending: false })
+    : { data: [] };
+
   const nm = (list: any[] | null, id: string | null) => (id ? (list ?? []).find((x) => x.id === id)?.name ?? "—" : "—");
-  const ids = (animals.data ?? []).map((r: any) => r.id);
-  const sums = ids.length ? await supabase.rpc("animal_weight_summary", { p_animal_ids: ids }) : { data: [] as any[] };
-  const wmap = new Map<string, any>(((sums.data ?? []) as any[]).map((s) => [s.animal_id, s]));
+  const wmap = new Map<string, any>();
+  for (const w of (weighRes.data ?? []) as any[]) {
+    const aid = w.animal_id;
+    if (!aid) continue;
+    const cur = wmap.get(aid);
+    if (!cur) {
+      wmap.set(aid, { animal_id: aid, last_weight: Number(w.weight_kg), last_at: w.weighed_at, prev_weight: null, prev_at: null });
+    } else if (cur.prev_weight === null) {
+      cur.prev_weight = Number(w.weight_kg);
+      cur.prev_at = w.weighed_at;
+    }
+  }
   const kg = (s: any) => (s ? Number(s.last_weight).toFixed(1).replace(".", ",") : "—");
   const gmd = (s: any) => {
     if (!s || s.prev_weight == null) return "—";
@@ -94,11 +110,16 @@ export default async function HerdPage({
   return (
     <AppShell {...shell}>
       <div className="head" style={{ marginBottom: 4 }}>
-        <div>
-          <h1 className="title">Gestão do Rebanho</h1>
-          <p className="muted" style={{ margin: "4px 0 0 0", fontSize: 14 }}>
-            Controle individual de animais, identificação SISBOV, lotes, piquetes e pesagens.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Gestão do Rebanho
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0 0", fontSize: 13.5 }}>
+              Controle individual de animais, identificação SISBOV, lotes, piquetes e pesagens.
+            </p>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <span className="badge neutral" style={{ padding: "6px 12px", fontSize: 13 }}>

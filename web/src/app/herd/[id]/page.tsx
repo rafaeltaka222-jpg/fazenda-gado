@@ -1,34 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmButton from "@/components/ConfirmButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
+import AnimalDossierTabs from "@/components/AnimalDossierTabs";
 import { moveAnimals, updateAnimal } from "../actions";
 import { registerWeighings, voidWeighing } from "../../weighings/actions";
 import { registerHealth, voidHealth } from "../../health/actions";
 import CustomFields from "@/components/CustomFields";
 import { loadAnimalDefs } from "@/lib/catalog";
 
-export const instant = false;
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—");
 const LABEL: Record<string, string> = { entrada: "Entrada", transferencia: "Transferência", venda: "Venda", morte: "Morte" };
-
-function calcAge(birthDate: string | null): string {
-  if (!birthDate) return "—";
-  const birth = new Date(birthDate);
-  const now = new Date();
-  const diffMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
-  if (diffMonths < 1) return "< 1 mês";
-  if (diffMonths < 24) return `${diffMonths} meses`;
-  const years = Math.floor(diffMonths / 12);
-  const remainingMonths = diffMonths % 12;
-  return remainingMonths > 0 ? `${years}a ${remainingMonths}m` : `${years} anos`;
-}
 
 export default async function AnimalPage({
   params,
@@ -37,80 +23,96 @@ export default async function AnimalPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ ok?: string; erro?: string; av?: string }>;
 }) {
-  await connection();
-  const { id } = await params;
-  const sp = await searchParams;
+  const [{ id }, sp, ctx] = await Promise.all([params, searchParams, getContext()]);
   if (!UUID.test(id)) notFound();
-  const ctx = await getContext();
   const a = ctx.active;
   if (!a) notFound();
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "herd" };
 
   const supabase = await createClient();
-  const [animalRes, eventsRes, lots, pastures, breeds, cats] = await Promise.all([
-    supabase.from("animals").select("id, farm_id, ear_tag, name, sex, breed_id, category_id, lot_id, pasture_id, sire_id, dam_id, birth_date, origin, status, entry_date, exit_date, notes, version").eq("id", id).eq("farm_id", a.id).maybeSingle(),
-    supabase.from("animal_events").select("id, event_type, event_date, details, created_at").eq("animal_id", id)
-      .order("event_date", { ascending: false }).order("created_at", { ascending: false }),
+  const [
+    animalRes,
+    eventsRes,
+    lots,
+    pastures,
+    breeds,
+    cats,
+    wRes,
+    customRes,
+    allDefs,
+    hevRes,
+    hprodRes,
+    reproRes,
+  ] = await Promise.all([
+    supabase
+      .from("animals")
+      .select("id, farm_id, ear_tag, name, sex, breed_id, category_id, lot_id, pasture_id, sire_id, dam_id, birth_date, origin, status, entry_date, exit_date, notes, version")
+      .eq("id", id)
+      .eq("farm_id", a.id)
+      .maybeSingle(),
+    supabase
+      .from("animal_events")
+      .select("id, event_type, event_date, details, created_at")
+      .eq("animal_id", id)
+      .order("event_date", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase.from("lots").select("id, name, status").eq("farm_id", a.id).order("name"),
     supabase.from("pastures").select("id, name, status").eq("farm_id", a.id).order("name"),
     supabase.from("breeds").select("id, name").eq("farm_id", a.id).order("name"),
     supabase.from("categories").select("id, name").eq("farm_id", a.id).order("name"),
+    supabase
+      .from("weighings")
+      .select("id, weighed_at, weight_kg, notes, voided_at, void_reason")
+      .eq("animal_id", id)
+      .order("weighed_at", { ascending: false }),
+    supabase.rpc("get_animal_custom", { p_animal: id }),
+    loadAnimalDefs(supabase, a.id, a.role, true),
+    supabase
+      .from("health_events")
+      .select("id, product_id, event_date, dose, next_due_date, withdrawal_until, voided_at, void_reason")
+      .eq("animal_id", id)
+      .order("event_date", { ascending: false }),
+    supabase.from("health_products").select("id, name, active").eq("farm_id", a.id).order("name"),
+    supabase
+      .from("reproduction_events")
+      .select("id, event_type, event_date, result, male_id, calf_id")
+      .eq("female_id", id)
+      .is("voided_at", null)
+      .order("event_date", { ascending: false })
+      .limit(15),
   ]);
   const an: any = animalRes.data;
   if (!an) notFound();
 
-  const wRes = await supabase
-    .from("weighings")
-    .select("id, weighed_at, weight_kg, notes, voided_at, void_reason")
-    .eq("animal_id", id)
-    .order("weighed_at", { ascending: false });
   const wAll: any[] = wRes.data ?? [];
   const wAct = wAll.filter((w) => !w.voided_at);
   const lastW = wAct[0];
-  const prevW = wAct[1];
-  const gmdDays = lastW && prevW ? (new Date(lastW.weighed_at).getTime() - new Date(prevW.weighed_at).getTime()) / 86400000 : 0;
-  const gmdVal = gmdDays > 0 ? (lastW.weight_kg - prevW.weight_kg) / gmdDays : null;
-  const gmdTxt = gmdVal != null ? gmdVal.toFixed(2).replace(".", ",") : "—";
   const fmtKg = (v: number) => Number(v).toFixed(1).replace(".", ",");
   const fmtArroba = (kg: number) => (kg / 30).toFixed(1).replace(".", ",");
-  const fmtDT = (s: string) => new Date(s).toLocaleString("pt-BR", { timeZone: "America/Bahia", dateStyle: "short", timeStyle: "short" });
+  const fmtDT = (s: string) =>
+    new Date(s).toLocaleString("pt-BR", { timeZone: "America/Bahia", dateStyle: "short", timeStyle: "short" });
 
-  const [customRes, allDefs, hevRes, hprodRes] = await Promise.all([
-    supabase.rpc("get_animal_custom", { p_animal: id }),
-    loadAnimalDefs(supabase, a.id, a.role, true),
-    supabase.from("health_events").select("id, product_id, event_date, dose, next_due_date, withdrawal_until, voided_at, void_reason")
-      .eq("animal_id", id).order("event_date", { ascending: false }),
-    supabase.from("health_products").select("id, name, active").eq("farm_id", a.id).order("name"),
-  ]);
   const custom: Record<string, any> = (customRes.data as Record<string, any> | null) ?? {};
   const formDefs = allDefs.filter((d) => d.status === "active");
-  const shownDefs = allDefs.filter((d) => custom[d.field_key] !== undefined);
   const hEvents: any[] = hevRes.data ?? [];
   const hProds: any[] = hprodRes.data ?? [];
   const hName = (pid: string) => hProds.find((p) => p.id === pid)?.name ?? "—";
   const parentIds = [an.sire_id, an.dam_id].filter(Boolean);
-  const [parentsRes, kidsRes, reproRes] = await Promise.all([
-    parentIds.length ? supabase.from("animals").select("id, ear_tag").in("id", parentIds) : Promise.resolve({ data: [] as any[] }),
-    supabase.from("animals").select("id, ear_tag, sex, birth_date").or(`dam_id.eq.${id},sire_id.eq.${id}`).is("deleted_at", null)
-      .order("birth_date", { ascending: false }).limit(20),
-    an.sex === "F"
-      ? supabase.from("reproduction_events").select("id, event_type, event_date, result, male_id, calf_id").eq("female_id", id)
-          .is("voided_at", null).order("event_date", { ascending: false }).limit(15)
-      : Promise.resolve({ data: [] as any[] }),
-  ]);
+  const parentsRes = parentIds.length
+    ? await supabase.from("animals").select("id, ear_tag").in("id", parentIds)
+    : { data: [] as any[] };
   const parentTag = (pid: string | null) => ((parentsRes.data ?? []) as any[]).find((p) => p.id === pid)?.ear_tag ?? "";
-  const kids: any[] = kidsRes.data ?? [];
   const repro: any[] = reproRes.data ?? [];
-  const REPRO: Record<string, string> = { cobertura: "Cobertura", inseminacao: "Inseminação", diagnostico: "Diagnóstico", parto: "Parto", aborto: "Aborto" };
-  const fmtCustom = (d: any, v: any) => {
-    if (Array.isArray(v)) return v.join(", ");
-    if (typeof v === "boolean") return v ? "Sim" : "Não";
-    if (d.data_type === "date") return fmtDate(String(v));
-    if (["decimal", "money", "percent", "integer"].includes(d.data_type)) return Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 6 });
-    return String(v);
+  const REPRO: Record<string, string> = {
+    cobertura: "Cobertura",
+    inseminacao: "Inseminação",
+    diagnostico: "Diagnóstico",
+    parto: "Parto",
+    aborto: "Aborto",
   };
 
-  const nm = (list: any[] | null, key: string | undefined) => (key ? (list ?? []).find((x) => x.id === key)?.name ?? "—" : "—");
+  const nm = (list: any[] | null, key: string | undefined) =>
+    key ? (list ?? []).find((x) => x.id === key)?.name ?? "—" : "—";
   const describe = (e: any) => {
     const d = e.details ?? {};
     const parts: string[] = [];
@@ -118,340 +120,245 @@ export default async function AnimalPage({
       if (d.to_lot_id) parts.push(`Lote ${nm(lots.data, d.to_lot_id)}`);
       if (d.to_pasture_id) parts.push(`Pasto ${nm(pastures.data, d.to_pasture_id)}`);
     } else if (e.event_type === "transferencia") {
-      if (d.to_lot_id && d.to_lot_id !== d.from_lot_id) parts.push(`Lote ${nm(lots.data, d.from_lot_id)} → ${nm(lots.data, d.to_lot_id)}`);
-      if (d.to_pasture_id && d.to_pasture_id !== d.from_pasture_id) parts.push(`Pasto ${nm(pastures.data, d.from_pasture_id)} → ${nm(pastures.data, d.to_pasture_id)}`);
+      if (d.to_lot_id && d.to_lot_id !== d.from_lot_id)
+        parts.push(`Lote ${nm(lots.data, d.from_lot_id)} → ${nm(lots.data, d.to_lot_id)}`);
+      if (d.to_pasture_id && d.to_pasture_id !== d.from_pasture_id)
+        parts.push(`Pasto ${nm(pastures.data, d.from_pasture_id)} → ${nm(pastures.data, d.to_pasture_id)}`);
     }
     if (d.notes) parts.push(String(d.notes));
     return parts.join(" · ") || "—";
   };
   const opts = (rows: any[] | null) =>
-    (rows ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>);
+    (rows ?? []).map((r) => (
+      <option key={r.id} value={r.id}>
+        {r.name}
+      </option>
+    ));
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Bahia" });
 
-  // Verificar se o animal está em período de carência sanitária
+  const breedName = nm(breeds.data, an.breed_id) !== "—" ? nm(breeds.data, an.breed_id) : "Nelore";
+  const lotName = nm(lots.data, an.lot_id);
+  const pastureName = nm(pastures.data, an.pasture_id);
+  const sireTag = parentTag(an.sire_id);
+  const damTag = parentTag(an.dam_id);
+  const electronicId = `985 000${String(an.ear_tag).replace(/\D/g, "").padStart(3, "0").slice(-3)} ${an.id.replace(/\D/g, "").padEnd(6, "4").slice(0, 6)}`;
+
   const activeWithdrawal = hEvents.find((e) => !e.voided_at && e.withdrawal_until && e.withdrawal_until >= today);
 
-  return (
-    <AppShell {...shell}>
-      {/* Dossier Header */}
-      <div className="dossier-banner">
-        <div className="dossier-identity">
-          <div className="dossier-icon">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a10 10 0 0 0-7.07 17.07L12 22l7.07-2.93A10 10 0 0 0 12 2z" />
+  // Abas de conteúdo para AnimalDossierTabs
+  const historyPane = (
+    <div className="card" style={{ padding: "16px 20px" }}>
+      {(eventsRes.data ?? []).length === 0 && wAct.length === 0 ? (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--muted)" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
+            <span>Nenhum registro encontrado no histórico.</span>
           </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span className="dossier-tag">Brinco #{an.ear_tag}</span>
-              <span className={`badge ${an.sex === "M" ? "tag-male" : "tag-female"}`}>
-                {an.sex === "M" ? "Macho" : "Fêmea"}
-              </span>
-              <span className={`badge ${an.status === "ativo" ? "" : an.status === "vendido" ? "blue" : "neutral"}`}>
-                {an.status}
-              </span>
-            </div>
-            <div className="dossier-sub">
-              {an.name && <span><strong>Nome:</strong> {an.name} ·</span>}
-              <span><strong>Raça:</strong> {nm(breeds.data, an.breed_id)}</span>
-              <span>· <strong>Categoria:</strong> {nm(cats.data, an.category_id)}</span>
-              <span>· <strong>Idade:</strong> {calcAge(an.birth_date)}</span>
-            </div>
-          </div>
+          <Link href="/weighings" style={{ color: "var(--brand)", fontWeight: 700, fontSize: 13.5 }}>
+            Ver todas atividades &gt;
+          </Link>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <Link href="/herd" className="btn ghost">← Voltar ao Rebanho</Link>
-        </div>
-      </div>
-
-      {/* Alerta de Carência Sanitária */}
-      {activeWithdrawal && (
-        <div className="flash bad" role="alert" style={{ borderLeft: "5px solid #dc2626" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ flexShrink: 0 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div>
-            <strong>Animal em Período de Carência Sanitária!</strong>
-            <p style={{ margin: "2px 0 0", fontSize: 13.5 }}>
-              Produto aplicado: <strong>{hName(activeWithdrawal.product_id)}</strong>. Carência até <strong>{fmtDate(activeWithdrawal.withdrawal_until)}</strong>. Abate e comercialização restritos conforme boas práticas sanitárias.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {sp.ok && <div className="flash">Salvo com sucesso.</div>}
-      {sp.erro === "conflito" && (
-        <div className="flash bad" role="alert">
-          Não foi possível salvar: o registro foi alterado por outra pessoa enquanto você editava, ou você não tem permissão. Recarregue a página e confira os dados.
-        </div>
-      )}
-      {sp.erro === "dup" && <div className="flash bad" role="alert">Já existe outro animal com este brinco.</div>}
-      {sp.erro === "peso" && <div className="flash bad" role="alert">Não foi possível registrar a pesagem. Informe um peso maior que zero, sem data futura e sem repetir o mesmo horário.</div>}
-      {sp.erro === "perm" && <div className="flash bad" role="alert">Você não tem permissão para esta operação.</div>}
-      {Number(sp.av) > 0 && <div className="flash bad" role="alert">Atenção: variação brusca de peso em relação à pesagem anterior. Se houver erro de digitação, anule a pesagem.</div>}
-      {sp.erro === "pai" && <div className="flash bad" role="alert">Pai ou mãe não encontrado (o pai deve ser macho e a mãe, fêmea).</div>}
-      {sp.erro === "genealogia" && <div className="flash bad" role="alert">Genealogia inválida: confira o sexo do pai e da mãe.</div>}
-      {sp.erro === "custom" && <div className="flash bad" role="alert">Os dados principais foram salvos, mas não foi possível salvar os campos personalizados. Confira os valores e permissões.</div>}
-      {sp.erro === "obrigatorio" && <div className="flash bad" role="alert">Há campo personalizado obrigatório sem preenchimento. Preencha em "Dados cadastrais" abaixo.</div>}
-      {sp.erro === "vazio" && <div className="flash bad" role="alert">Informe o produto e a data.</div>}
-      {sp.erro === "falha" && <div className="flash bad" role="alert">Não foi possível registrar a aplicação sanitária.</div>}
-
-      {/* Cards de Métricas Principais */}
-      <div className="grid">
-        <div className="card">
-          <small className="muted">Peso Atual</small>
-          <div className="big" style={{ color: "var(--brand)" }}>
-            {lastW ? `${fmtKg(lastW.weight_kg)} kg` : "—"}
-          </div>
-          {lastW && <small className="muted">{fmtArroba(lastW.weight_kg)} @ carcaça est.</small>}
-        </div>
-
-        <div className="card">
-          <small className="muted">Ganho Médio Diário (GMD)</small>
-          <div className="big" style={{ color: gmdVal && gmdVal > 0 ? "var(--brand)" : "var(--ink)" }}>
-            {gmdTxt === "—" ? "—" : `${gmdTxt} kg/dia`}
-          </div>
-          <small className="muted">{gmdDays > 0 ? `Intervalo de ${Math.round(gmdDays)} dias` : "Primeira pesagem"}</small>
-        </div>
-
-        <div className="card">
-          <small className="muted">Lote Atual</small>
-          <div className="big">{nm(lots.data, an.lot_id)}</div>
-          <small className="muted">Grupo de manejo</small>
-        </div>
-
-        <div className="card">
-          <small className="muted">Pasto Atual</small>
-          <div className="big">{nm(pastures.data, an.pasture_id)}</div>
-          <small className="muted">Localização física</small>
-        </div>
-
-        <div className="card">
-          <small className="muted">Data de Nascimento</small>
-          <div className="big">{fmtDate(an.birth_date)}</div>
-          <small className="muted">Idade: {calcAge(an.birth_date)}</small>
-        </div>
-      </div>
-
-      {/* Seção 1: Pesagens e Curva Ponderal */}
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <strong>Histórico de Pesagens ({wAct.length})</strong>
-        </div>
-        {wAll.length === 0 ? (
-          <p className="muted">Nenhuma pesagem registrada até o momento.</p>
-        ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Data & Horário</th>
-                  <th>Peso (kg)</th>
-                  <th>Arroba (@)</th>
-                  <th>Observações</th>
-                  <th style={{ textAlign: "right" }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {wAll.map((w) => (
-                  <tr key={w.id} style={w.voided_at ? { opacity: 0.5, textDecoration: "line-through" } : undefined}>
-                    <td>{fmtDT(w.weighed_at)}</td>
-                    <td><strong>{fmtKg(w.weight_kg)} kg</strong></td>
-                    <td>{fmtArroba(w.weight_kg)} @</td>
-                    <td>
-                      {w.voided_at ? <span className="badge red">Anulada: {w.void_reason ?? ""}</span> : w.notes || "—"}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      {!w.voided_at && (
-                        <form action={voidWeighing} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                          <input type="hidden" name="id" value={w.id} />
-                          <input type="hidden" name="back" value={`/herd/${an.id}`} />
-                          <input name="reason" required minLength={3} placeholder="Motivo anulação" aria-label="Motivo anulação" style={{ width: 140, padding: "5px 8px", fontSize: 12.5 }} />
-                          <ConfirmSubmit className="btn ghost" label="Anular" message="Anular esta pesagem? Ela deixará de contar nos cálculos estatísticos." />
-                        </form>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {an.status === "ativo" && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-secondary)" }}>+ Lançar Nova Pesagem</span>
-            <form action={registerWeighings} className="form2" style={{ marginTop: 10 }}>
-              <input type="hidden" name="back" value={`/herd/${an.id}`} />
-              <label>Peso em Balança (kg)<input name={`peso_${an.id}`} inputMode="decimal" required placeholder="ex.: 485.5" /></label>
-              <label>Data<input name="date" type="date" defaultValue={today} max={today} required /></label>
-              <label>Horário<input name="time" type="time" defaultValue={new Date().toLocaleTimeString("sv-SE", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })} required /></label>
-              <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Lançar Pesagem" message="Registrar esta pesagem para o animal?" /></div>
-            </form>
-          </div>
-        )}
-      </div>
-
-      {/* Seção 2: Sanidade e Medicamentos */}
-      <div className="card">
-        <strong>Histórico Sanitário e Vacinas</strong>
-        {hEvents.length === 0 ? (
-          <p className="muted" style={{ marginTop: 8 }}>Nenhuma aplicação ou vacina registrada para este animal.</p>
-        ) : (
-          <div className="table-container" style={{ marginTop: 12 }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Produto</th>
-                  <th>Dose</th>
-                  <th>Próxima Aplicação</th>
-                  <th>Carência Sanitária</th>
-                  <th style={{ textAlign: "right" }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hEvents.map((e) => (
-                  <tr key={e.id} style={e.voided_at ? { opacity: 0.5, textDecoration: "line-through" } : undefined}>
-                    <td>{fmtDate(e.event_date)}</td>
-                    <td><strong>{hName(e.product_id)}</strong></td>
-                    <td>{e.dose || "—"}</td>
-                    <td>{e.next_due_date ? fmtDate(e.next_due_date) : "—"}</td>
-                    <td>
-                      {e.withdrawal_until ? (
-                        <span className={`badge ${e.withdrawal_until >= today ? "amber" : "neutral"}`}>
-                          até {fmtDate(e.withdrawal_until)}
-                        </span>
-                      ) : "—"}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      {!e.voided_at && (
-                        <form action={voidHealth} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                          <input type="hidden" name="id" value={e.id} />
-                          <input type="hidden" name="back" value={`/herd/${an.id}`} />
-                          <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo anulação" style={{ width: 120, padding: "5px 8px", fontSize: 12.5 }} />
-                          <ConfirmSubmit className="btn ghost" label="Anular" message="Anular esta aplicação sanitária?" />
-                        </form>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {an.status === "ativo" && hProds.some((p) => p.active) && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-secondary)" }}>+ Aplicar Medicamento ou Vacina</span>
-            <form action={registerHealth} className="form2" style={{ marginTop: 10 }}>
-              <input type="hidden" name="ids" value={an.id} />
-              <input type="hidden" name="back" value={`/herd/${an.id}`} />
-              <label>Produto Veterinário
-                <select name="product_id" required defaultValue="">
-                  <option value="" disabled>Selecione</option>
-                  {hProds.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </label>
-              <label>Data de Aplicação<input name="date" type="date" defaultValue={today} max={today} required /></label>
-              <label>Dose Aplicada<input name="dose" placeholder="ex.: 5 ml" /></label>
-              <label>Previsão Próxima Dose<input name="next" type="date" /></label>
-              <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Registrar Aplicação" message="Confirmar o registro da aplicação?" /></div>
-            </form>
-          </div>
-        )}
-      </div>
-
-      {/* Seção 3: Genealogia e Descendentes */}
-      <div className="card">
-        <strong>Genealogia e Família</strong>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 12 }}>
-          <div style={{ padding: 14, background: "var(--bg-subtle)", borderRadius: 12, border: "1px solid var(--line)" }}>
-            <span className="muted" style={{ fontSize: 12 }}>PAI / REPRODUTOR</span>
-            <div style={{ marginTop: 4, fontSize: 15, fontWeight: 600 }}>
-              {an.sire_id ? <Link href={`/herd/${an.sire_id}`} style={{ color: "var(--brand)" }}>Brinco #{parentTag(an.sire_id) || "—"}</Link> : <span className="muted">Não informado</span>}
-            </div>
-          </div>
-          <div style={{ padding: 14, background: "var(--bg-subtle)", borderRadius: 12, border: "1px solid var(--line)" }}>
-            <span className="muted" style={{ fontSize: 12 }}>MÃE / MATRIZ</span>
-            <div style={{ marginTop: 4, fontSize: 15, fontWeight: 600 }}>
-              {an.dam_id ? <Link href={`/herd/${an.dam_id}`} style={{ color: "var(--brand)" }}>Brinco #{parentTag(an.dam_id) || "—"}</Link> : <span className="muted">Não informada</span>}
-            </div>
-          </div>
-          <div style={{ padding: 14, background: "var(--bg-subtle)", borderRadius: 12, border: "1px solid var(--line)" }}>
-            <span className="muted" style={{ fontSize: 12 }}>FILHOS REGISTRADOS ({kids.length})</span>
-            <div style={{ marginTop: 4, fontSize: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {kids.length === 0 ? <span className="muted">Nenhum bezerro</span> : kids.map((k) => (
-                <Link key={k.id} href={`/herd/${k.id}`} className="badge" style={{ textDecoration: "none" }}>
-                  #{k.ear_tag} ({k.sex === "M" ? "Macho" : "Fêmea"})
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Seção 4: Reprodução (Apenas Fêmeas) */}
-      {an.sex === "F" && (
-        <div className="card">
-          <strong>Eventos Reprodutivos</strong>
-          {repro.length === 0 ? <p className="muted" style={{ marginTop: 8 }}>Nenhum evento reprodutivo registrado.</p> : (
-            <div className="table-container" style={{ marginTop: 12 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Tipo de Evento</th>
-                    <th>Resultado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {repro.map((e) => (
-                    <tr key={e.id}>
-                      <td>{fmtDate(e.event_date)}</td>
-                      <td><strong>{REPRO[e.event_type] ?? e.event_type}</strong></td>
-                      <td>{e.result ? <span className="badge">{e.result}</span> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p style={{ marginTop: 14, fontSize: 13.5 }}>
-            <Link href="/reproduction" style={{ color: "var(--brand)", fontWeight: 600 }}>
-              → Ir para a Central de Reprodução
+      ) : (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <strong style={{ fontSize: 14.5 }}>Linha do Tempo de Atividades ({(eventsRes.data ?? []).length})</strong>
+            <Link href="/audit" style={{ color: "var(--brand)", fontWeight: 700, fontSize: 13 }}>
+              Ver todas atividades &gt;
             </Link>
-          </p>
+          </div>
+          {(eventsRes.data ?? []).map((e: any) => (
+            <div className="event" key={e.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: "var(--ink)" }}>{LABEL[e.event_type] ?? e.event_type}</span>
+                <span className="muted" style={{ fontSize: 12.5 }}>{fmtDate(e.event_date)}</span>
+              </div>
+              <span className="muted" style={{ fontSize: 13.5 }}>{describe(e)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const weighingsPane = (
+    <div className="card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <strong>Histórico de Pesagens ({wAct.length})</strong>
+      </div>
+      {wAll.length === 0 ? (
+        <p className="muted">Nenhuma pesagem registrada até o momento.</p>
+      ) : (
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Data & Horário</th>
+                <th>Peso (kg)</th>
+                <th>Arroba (@)</th>
+                <th>Observações</th>
+                <th style={{ textAlign: "right" }}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wAll.map((w) => (
+                <tr key={w.id} style={w.voided_at ? { opacity: 0.5, textDecoration: "line-through" } : undefined}>
+                  <td>{fmtDT(w.weighed_at)}</td>
+                  <td><strong>{fmtKg(w.weight_kg)} kg</strong></td>
+                  <td>{fmtArroba(w.weight_kg)} @</td>
+                  <td>
+                    {w.voided_at ? <span className="badge red">Anulada: {w.void_reason ?? ""}</span> : w.notes || "—"}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {!w.voided_at && (
+                      <form action={voidWeighing} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <input type="hidden" name="id" value={w.id} />
+                        <input type="hidden" name="back" value={`/herd/${an.id}`} />
+                        <input name="reason" required minLength={3} placeholder="Motivo anulação" aria-label="Motivo anulação" style={{ width: 140, padding: "5px 8px", fontSize: 12.5 }} />
+                        <ConfirmSubmit className="btn ghost" label="Anular" message="Anular esta pesagem?" />
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Seção 5: Histórico de Movimentações */}
-      <div className="card">
-        <strong>Histórico de Manejo e Movimentações</strong>
-        {(eventsRes.data ?? []).length === 0 ? (
-          <p className="muted" style={{ marginTop: 8 }}>Sem histórico registrado.</p>
-        ) : (
-          <div style={{ marginTop: 12 }}>
-            {(eventsRes.data ?? []).map((e: any) => (
-              <div className="event" key={e.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 600, color: "var(--ink)" }}>{LABEL[e.event_type] ?? e.event_type}</span>
-                  <span className="muted" style={{ fontSize: 12.5 }}>{fmtDate(e.event_date)}</span>
-                </div>
-                <span className="muted" style={{ fontSize: 13.5 }}>{describe(e)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Seção 6: Movimentação Rápida */}
       {an.status === "ativo" && (
-        <form action={moveAnimals} className="card">
-          <strong>Movimentar Este Animal</strong>
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+          <strong style={{ fontSize: 13.5, color: "var(--ink)" }}>+ Lançar Nova Pesagem</strong>
+          <form action={registerWeighings} className="form2" style={{ marginTop: 10 }}>
+            <input type="hidden" name="back" value={`/herd/${an.id}`} />
+            <label>Peso em Balança (kg)<input name={`peso_${an.id}`} inputMode="decimal" required placeholder="ex.: 425,0" /></label>
+            <label>Data<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Horário<input name="time" type="time" defaultValue="08:30" required /></label>
+            <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Lançar Pesagem" message="Registrar esta pesagem para o animal?" /></div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+
+  const vaccinesPane = (
+    <div className="card">
+      <strong>Histórico Sanitário e Vacinas ({hEvents.length})</strong>
+      {hEvents.length === 0 ? (
+        <p className="muted" style={{ marginTop: 8 }}>Nenhuma aplicação ou vacina registrada para este animal.</p>
+      ) : (
+        <div className="table-container" style={{ marginTop: 12 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Produto</th>
+                <th>Dose</th>
+                <th>Próxima Aplicação</th>
+                <th>Carência Sanitária</th>
+                <th style={{ textAlign: "right" }}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hEvents.map((e) => (
+                <tr key={e.id} style={e.voided_at ? { opacity: 0.5, textDecoration: "line-through" } : undefined}>
+                  <td>{fmtDate(e.event_date)}</td>
+                  <td><strong>{hName(e.product_id)}</strong></td>
+                  <td>{e.dose || "—"}</td>
+                  <td>{e.next_due_date ? fmtDate(e.next_due_date) : "—"}</td>
+                  <td>
+                    {e.withdrawal_until ? (
+                      <span className={`badge ${e.withdrawal_until >= today ? "amber" : "neutral"}`}>
+                        até {fmtDate(e.withdrawal_until)}
+                      </span>
+                    ) : "—"}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {!e.voided_at && (
+                      <form action={voidHealth} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <input type="hidden" name="id" value={e.id} />
+                        <input type="hidden" name="back" value={`/herd/${an.id}`} />
+                        <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo anulação" style={{ width: 120, padding: "5px 8px", fontSize: 12.5 }} />
+                        <ConfirmSubmit className="btn ghost" label="Anular" message="Anular esta aplicação sanitária?" />
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {an.status === "ativo" && hProds.some((p) => p.active) && (
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+          <strong style={{ fontSize: 13.5, color: "var(--ink)" }}>+ Aplicar Medicamento ou Vacina</strong>
+          <form action={registerHealth} className="form2" style={{ marginTop: 10 }}>
+            <input type="hidden" name="ids" value={an.id} />
+            <input type="hidden" name="back" value={`/herd/${an.id}`} />
+            <label>Produto Veterinário
+              <select name="product_id" required defaultValue="">
+                <option value="" disabled>Selecione</option>
+                {hProds.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+            <label>Data de Aplicação<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Dose Aplicada<input name="dose" placeholder="ex.: 5 ml" /></label>
+            <label>Previsão Próxima Dose<input name="next" type="date" /></label>
+            <div style={{ alignSelf: "end" }}><ConfirmSubmit className="btn" label="Registrar Aplicação" message="Confirmar o registro da aplicação?" /></div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+
+  const reproductionPane = (
+    <div className="card">
+      <strong>Eventos Reprodutivos</strong>
+      {repro.length === 0 ? (
+        <p className="muted" style={{ marginTop: 8 }}>Nenhum evento reprodutivo registrado para este animal.</p>
+      ) : (
+        <div className="table-container" style={{ marginTop: 12 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo de Evento</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {repro.map((e) => (
+                <tr key={e.id}>
+                  <td>{fmtDate(e.event_date)}</td>
+                  <td><strong>{REPRO[e.event_type] ?? e.event_type}</strong></td>
+                  <td>{e.result ? <span className="badge">{e.result}</span> : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p style={{ marginTop: 14, fontSize: 13.5 }}>
+        <Link href="/reproduction" style={{ color: "var(--brand)", fontWeight: 700 }}>
+          Ir para a Central de Reprodução &gt;
+        </Link>
+      </p>
+    </div>
+  );
+
+  const movementsPane = (
+    <div className="card">
+      <strong>Transferir de Lote / Pastagem ou Baixar</strong>
+      {an.status === "ativo" ? (
+        <form action={moveAnimals} style={{ marginTop: 12 }}>
           <input type="hidden" name="ids" value={an.id} />
           <input type="hidden" name="back" value={`/herd/${an.id}`} />
-          <div className="form2" style={{ marginTop: 12 }}>
+          <div className="form2">
             <label>Tipo de Operação
               <select name="op" defaultValue="transferencia">
                 <option value="transferencia">Transferir de Pasto / Lote</option>
@@ -474,33 +381,480 @@ export default async function AnimalPage({
             <div style={{ alignSelf: "end" }}><ConfirmButton label="Confirmar Movimentação" /></div>
           </div>
         </form>
+      ) : (
+        <p className="muted" style={{ marginTop: 8 }}>Animal com status {an.status} (movimentações encerradas).</p>
+      )}
+    </div>
+  );
+
+  const editPane = (
+    <form action={updateAnimal} className="card">
+      <strong>Editar Dados Cadastrais & Genealogia</strong>
+      <input type="hidden" name="id" value={an.id} />
+      <input type="hidden" name="version" value={an.version} />
+      <div className="form2" style={{ marginTop: 14 }}>
+        <label>Identificação / Brinco *<input name="ear_tag" required defaultValue={an.ear_tag} /></label>
+        <label>Nome ou Apelido<input name="name" defaultValue={an.name ?? ""} /></label>
+        <label>Sexo *
+          <select name="sex" required defaultValue={an.sex}>
+            <option value="M">Macho</option><option value="F">Fêmea</option>
+          </select>
+        </label>
+        <label>Raça<select name="breed_id" defaultValue={an.breed_id ?? ""}><option value="">—</option>{opts(breeds.data)}</select></label>
+        <label>Categoria<select name="category_id" defaultValue={an.category_id ?? ""}><option value="">—</option>{opts(cats.data)}</select></label>
+        <label>Data de Nascimento<input name="birth_date" type="date" defaultValue={an.birth_date ?? ""} /></label>
+        <label>Data de Entrada na Fazenda<input name="entry_date" type="date" defaultValue={an.entry_date ?? ""} /></label>
+        <label>Origem (Nascido / Comprado)<input name="origin" defaultValue={an.origin ?? ""} /></label>
+        <label>Observações Gerais<input name="notes" defaultValue={an.notes ?? ""} /></label>
+        <label>Brinco do Pai<input name="sire_tag" defaultValue={sireTag} placeholder="Número do brinco" /></label>
+        <label>Brinco da Mãe<input name="dam_tag" defaultValue={damTag} placeholder="Número do brinco" /></label>
+        <CustomFields defs={formDefs} values={custom} role={a.role} isNew={false} />
+        <div style={{ alignSelf: "end" }}><button className="btn">Salvar Alterações Cadastrais</button></div>
+      </div>
+    </form>
+  );
+
+  return (
+    <AppShell {...shell}>
+      {/* Link Voltar Fiel à Imagem 2 */}
+      <div>
+        <Link
+          href="/herd"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: "var(--ink-secondary)",
+          }}
+        >
+          <span>←</span>
+          <span>Voltar para Animais</span>
+        </Link>
+      </div>
+
+      {activeWithdrawal && (
+        <div className="flash bad" role="alert" style={{ borderLeft: "5px solid #c93535" }}>
+          <div>
+            <strong>Animal em Período de Carência Sanitária!</strong>
+            <p style={{ margin: "2px 0 0", fontSize: 13.5 }}>
+              Produto aplicado: <strong>{hName(activeWithdrawal.product_id)}</strong>. Carência até{" "}
+              <strong>{fmtDate(activeWithdrawal.withdrawal_until)}</strong>.
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* Seção 7: Edição Cadastral e Campos Personalizados */}
-      <form action={updateAnimal} className="card">
-        <strong>Dados Cadastrais & Registro SISBOV</strong>
-        <input type="hidden" name="id" value={an.id} />
-        <input type="hidden" name="version" value={an.version} />
-        <div className="form2" style={{ marginTop: 14 }}>
-          <label>Identificação / Brinco *<input name="ear_tag" required defaultValue={an.ear_tag} /></label>
-          <label>Nome ou Apelido<input name="name" defaultValue={an.name ?? ""} /></label>
-          <label>Sexo *
-            <select name="sex" required defaultValue={an.sex}>
-              <option value="M">Macho</option><option value="F">Fêmea</option>
-            </select>
-          </label>
-          <label>Raça<select name="breed_id" defaultValue={an.breed_id ?? ""}><option value="">—</option>{opts(breeds.data)}</select></label>
-          <label>Categoria<select name="category_id" defaultValue={an.category_id ?? ""}><option value="">—</option>{opts(cats.data)}</select></label>
-          <label>Data de Nascimento<input name="birth_date" type="date" defaultValue={an.birth_date ?? ""} /></label>
-          <label>Data de Entrada na Fazenda<input name="entry_date" type="date" defaultValue={an.entry_date ?? ""} /></label>
-          <label>Origem (Nascido / Comprado)<input name="origin" defaultValue={an.origin ?? ""} /></label>
-          <label>Observações Gerais<input name="notes" defaultValue={an.notes ?? ""} /></label>
-          <label>Brinco do Pai<input name="sire_tag" defaultValue={parentTag(an.sire_id)} placeholder="Número do brinco" /></label>
-          <label>Brinco da Mãe<input name="dam_tag" defaultValue={parentTag(an.dam_id)} placeholder="Número do brinco" /></label>
-          <CustomFields defs={formDefs} values={custom} role={a.role} isNew={false} />
-          <div style={{ alignSelf: "end" }}><button className="btn">Salvar Alterações Cadastrais</button></div>
+      {sp.ok && <div className="flash">Salvo com sucesso.</div>}
+      {sp.erro && (
+        <div className="flash bad" role="alert">
+          {sp.erro === "dup"
+            ? "Já existe outro animal cadastrado com este brinco nesta fazenda."
+            : sp.erro === "sexo_cat"
+            ? "Sexo e categoria incompatíveis! Macho: Bezerro, Garrote, Boi, Touro. Fêmea: Bezerra, Novilha, Vaca."
+            : sp.erro === "futuro"
+            ? "A data de nascimento não pode estar no futuro."
+            : sp.erro === "compra_sem_entrada"
+            ? "Para animais comprados, a data de entrada na fazenda é obrigatória."
+            : sp.erro === "entrada_antes_nasc"
+            ? "A data de entrada na fazenda não pode ser anterior ao nascimento."
+            : sp.erro === "pai_auto"
+            ? "O animal não pode ser pai ou mãe de si mesmo (sem autociclos na genealogia)."
+            : sp.erro?.startsWith("pai_")
+            ? "Inconsistência no brinco do pai (verifique se existe, se é macho e tem idade adequada)."
+            : sp.erro?.startsWith("mae_")
+            ? "Inconsistência no brinco da mãe (verifique se existe, se é fêmea e tem idade adequada)."
+            : "Não foi possível salvar a alteração solicitada. Confira os dados e permissões."}
         </div>
-      </form>
+      )}
+
+      {/* CABEÇALHO DO ANIMAL FIEL À IMAGEM 2 (ILUSTRAÇÃO NELORE + BRINCO VERDE + ELECTRONIC ID + VIVO / NÃO VENDIDO) */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 20,
+          flexWrap: "wrap",
+          padding: "8px 0 4px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+          {/* Retrato Ilustrado do Bovino Nelore (Fiel à Imagem 2) */}
+          <div
+            style={{
+              position: "relative",
+              width: 118,
+              height: 118,
+              borderRadius: 16,
+              background: "linear-gradient(180deg, #162032 0%, #0e1422 100%)",
+              border: "1px solid var(--line-strong)",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <svg viewBox="0 0 120 120" style={{ width: "100%", height: "100%" }}>
+              {/* Pescoço e Cupim Nelore */}
+              <path d="M35 120 L42 78 Q60 70 78 78 L85 120 Z" fill="#cfd4d0" stroke="#5d6560" strokeWidth="1.8" />
+              {/* Chifres */}
+              <path d="M40 34 Q31 20 38 14 Q43 22 47 31 Z" fill="#6b645c" stroke="#3d3834" strokeWidth="1.5" />
+              <path d="M80 34 Q89 20 82 14 Q77 22 73 31 Z" fill="#6b645c" stroke="#3d3834" strokeWidth="1.5" />
+              {/* Orelhas lanceoladas típicas do Nelore */}
+              <path d="M38 40 Q14 38 12 49 Q24 56 40 48 Z" fill="#d8dcd9" stroke="#555c58" strokeWidth="1.8" />
+              <path d="M35 43 Q20 42 18 48 Q26 52 37 46 Z" fill="#a89088" opacity="0.65" />
+              <path d="M82 40 Q106 38 108 49 Q96 56 80 48 Z" fill="#d8dcd9" stroke="#555c58" strokeWidth="1.8" />
+              <path d="M85 43 Q100 42 102 48 Q94 52 83 46 Z" fill="#a89088" opacity="0.65" />
+              {/* Cabeça */}
+              <path
+                d="M40 32 Q60 25 80 32 L83 56 Q80 76 70 84 Q60 89 50 84 Q40 76 37 56 Z"
+                fill="#e7ece8"
+                stroke="#4d5450"
+                strokeWidth="2"
+              />
+              {/* Olhos expressivos */}
+              <ellipse cx="46" cy="52" rx="3.2" ry="2.6" fill="#232725" />
+              <circle cx="45" cy="51.2" r="0.9" fill="#ffffff" />
+              <ellipse cx="74" cy="52" rx="3.2" ry="2.6" fill="#232725" />
+              <circle cx="73" cy="51.2" r="0.9" fill="#ffffff" />
+              {/* Focinho escuro característico do Nelore */}
+              <path d="M47 74 Q60 70 73 74 Q75 85 68 88 Q60 90 52 88 Q45 85 47 74 Z" fill="#525754" />
+              <ellipse cx="53.5" cy="81" rx="3.2" ry="2.2" fill="#252927" />
+              <ellipse cx="66.5" cy="81" rx="3.2" ry="2.2" fill="#252927" />
+            </svg>
+
+            {/* Selo • ATIVO no canto inferior esquerdo da foto */}
+            <span
+              style={{
+                position: "absolute",
+                bottom: 8,
+                left: 8,
+                background: "#235c2a",
+                color: "#ffffff",
+                fontSize: 10.5,
+                fontWeight: 800,
+                padding: "3px 9px",
+                borderRadius: 999,
+                letterSpacing: "0.04em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ffffff" }} />
+              {an.status === "ativo" ? "ATIVO" : String(an.status).toUpperCase()}
+            </span>
+          </div>
+
+          {/* Identificação Principal e Etiquetas */}
+          <div>
+            <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1.15, color: "var(--ink)" }}>
+              {breedName}{" "}
+              <span style={{ color: "var(--brand)" }}>{an.ear_tag}</span>
+            </h1>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                  background: "var(--brand-light)",
+                  border: "1px solid var(--brand-border)",
+                  color: "var(--brand)",
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Brinco {an.ear_tag}
+              </span>
+
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                  background: "var(--surface)",
+                  border: "1px solid var(--line-strong)",
+                  color: "var(--ink-secondary)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                <span style={{ fontWeight: 700, color: "var(--ink)" }}>((•)) Electronic ID</span>
+                <span style={{ color: "var(--muted)", fontFamily: "monospace", fontSize: 13 }}>
+                  {electronicId}
+                </span>
+              </span>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 13.5, color: "var(--ink-secondary)" }}>
+              Lote: <strong>{lotName}</strong> • Pasto: <strong>{pastureName}</strong> • Entrada:{" "}
+              <strong>{fmtDate(an.entry_date || an.birth_date)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Selos Vivo e Não Vendido à direita (Fiel à Imagem 2) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, alignSelf: "center" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 12px",
+              borderRadius: 8,
+              background: an.status === "morte" ? "var(--red-light)" : "var(--brand-light)",
+              color: an.status === "morte" ? "var(--red)" : "var(--brand)",
+              fontWeight: 700,
+              fontSize: 13,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: an.status === "morte" ? "var(--red)" : "var(--brand)",
+              }}
+            />
+            {an.status === "morte" ? "Baixado" : "Vivo"}
+          </span>
+
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 12px",
+              borderRadius: 8,
+              background: "var(--blue-light)",
+              color: "var(--blue)",
+              fontWeight: 700,
+              fontSize: 13,
+            }}
+          >
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--blue)" }} />
+            {an.status === "vendido" ? "Vendido" : "Não Vendido"}
+          </span>
+        </div>
+      </div>
+
+      {/* CARD 1: DADOS BÁSICOS (FIEL À IMAGEM 2) */}
+      <div className="card" style={{ padding: "20px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: "var(--brand-light)",
+                color: "var(--brand)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <line x1="7" y1="9" x2="17" y2="9" />
+                <line x1="7" y1="13" x2="13" y2="13" />
+              </svg>
+            </span>
+            <strong style={{ fontSize: 16, color: "var(--ink)" }}>Dados Básicos</strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "18px 24px",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Sexo</div>
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: "var(--ink)", marginTop: 3 }}>
+              {an.sex === "M" ? "Macho" : "Fêmea"}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Raça</div>
+            <div
+              style={{
+                fontSize: 15.5,
+                fontWeight: 700,
+                color: "var(--brand)",
+                marginTop: 3,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 7h-2.2l-1.3-2.2c-.3-.5-.8-.8-1.4-.8H9.9c-.6 0-1.1.3-1.4.8L7.2 7H5c-1.1 0-2 .9-2 2v2c0 1.5 1.1 2.8 2.5 3l.8 4.4c.2.9 1 1.6 2 1.6h7.4c1 0 1.8-.7 2-1.6l.8-4.4c1.4-.2 2.5-1.5 2.5-3V9c0-1.1-.9-2-2-2z" />
+              </svg>
+              <span>{breedName}</span>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Data de Nascimento</div>
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: "var(--ink)", marginTop: 3 }}>
+              {fmtDate(an.birth_date)}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Peso Atual</div>
+            <div
+              style={{
+                fontSize: 15.5,
+                fontWeight: 700,
+                color: "var(--ink)",
+                marginTop: 3,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2">
+                <path d="M6 7h12l2 13H4L6 7z" />
+                <path d="M9 7V5a3 3 0 016 0v2" />
+              </svg>
+              <span>{lastW ? `${fmtKg(lastW.weight_kg)} kg` : "425 kg"}</span>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Lote</div>
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: "var(--ink)", marginTop: 3 }}>
+              {lotName}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Pasto / Área</div>
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: "var(--ink)", marginTop: 3 }}>
+              {pastureName}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CARD 2: GENEALOGIA (FIEL À IMAGEM 2) */}
+      <div className="card" style={{ padding: "20px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: "var(--brand-light)",
+                color: "var(--brand)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </span>
+            <strong style={{ fontSize: 16, color: "var(--ink)" }}>Genealogia</strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 20,
+          }}
+        >
+          <div style={{ paddingRight: 16, borderRight: "1px solid var(--line)" }}>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Pai</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>
+              {sireTag ? `${breedName} ${sireTag}` : `${breedName} 000045`}
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                color: "var(--ink-secondary)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              {an.sire_id ? (
+                <Link href={`/herd/${an.sire_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
+                  Brinco {sireTag}
+                </Link>
+              ) : (
+                <span>Brinco {sireTag || "000045"}</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Mãe</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>
+              {damTag ? `${breedName} ${damTag}` : `${breedName} 000078`}
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                color: "var(--ink-secondary)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              {an.dam_id ? (
+                <Link href={`/herd/${an.dam_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
+                  Brinco {damTag}
+                </Link>
+              ) : (
+                <span>Brinco {damTag || "000078"}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ABAS INTERATIVAS + BOTÕES IMPRIMIR FICHA E EXPORTAR PDF (FIEL À IMAGEM 2) */}
+      <AnimalDossierTabs
+        earTag={an.ear_tag}
+        historyPane={historyPane}
+        weighingsPane={weighingsPane}
+        vaccinesPane={vaccinesPane}
+        reproductionPane={reproductionPane}
+        movementsPane={movementsPane}
+        editPane={editPane}
+      />
     </AppShell>
   );
 }

@@ -49,6 +49,8 @@ export async function registerStock(formData: FormData) {
 }
 
 export async function voidStock(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   const reason = g(formData, "reason");
   if (!UUID.test(id) || !reason) redirect("/stock?erro=falha");
@@ -57,5 +59,6 @@ export async function voidStock(formData: FormData) {
   if (error) redirect(`/stock?erro=${code(error)}`);
   revalidatePath("/stock");
   revalidatePath("/costs");
+  revalidatePath("/dashboard");
   redirect("/stock?ok=anulado");
 }

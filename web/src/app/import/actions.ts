@@ -14,6 +14,8 @@ const int = (v: string | null) => (v === null ? null : /^\d{1,2}$/.test(v) ? Num
 export async function createLayout(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const rawBack = String(formData.get("back") ?? "/import");
+  const back = rawBack.startsWith("/weighings") ? "/weighings" : "/import";
   const colAnimal = int(g(formData, "col_animal"));
   const colDate = int(g(formData, "col_date"));
   const colTime = int(g(formData, "col_time"));
@@ -24,12 +26,11 @@ export async function createLayout(formData: FormData) {
     Number.isNaN(colTime) ||
     new Set(cols).size !== cols.length
   ) {
-    redirect("/import?erro=layoutinvalido");
+    redirect(`${back}?erro=layoutinvalido`);
   }
   const supabase = await createClient();
-  const { error } = await supabase.from("import_layouts").insert({
-    farm_id: ctx.active.id,
-    name: g(formData, "name"),
+  const rawName = g(formData, "name") ?? `Layout Curral ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  const layoutData = {
     delimiter: g(formData, "delimiter"),
     has_header: formData.get("has_header") === "on",
     date_format: g(formData, "date_format"),
@@ -40,15 +41,27 @@ export async function createLayout(formData: FormData) {
     col_weight: colWeight,
     default_time: g(formData, "default_time") ?? "12:00",
     device_name: g(formData, "device_name") ?? "",
-  });
-  if (error) redirect("/import?erro=layoutinvalido");
+  };
+  // O índice único é (farm_id, lower(name)): se o nome já existir, atualiza o layout existente em vez de falhar.
+  const { data: existing } = await supabase
+    .from("import_layouts")
+    .select("id, name")
+    .eq("farm_id", ctx.active.id);
+  const match = (existing ?? []).find((r: any) => String(r.name).toLowerCase() === rawName.toLowerCase());
+  const { error } = match
+    ? await supabase.from("import_layouts").update(layoutData).eq("id", match.id)
+    : await supabase.from("import_layouts").insert({ farm_id: ctx.active.id, name: rawName, ...layoutData });
+  if (error) redirect(`${back}?erro=layoutinvalido`);
   revalidatePath("/import");
-  redirect("/import?ok=layout");
+  revalidatePath("/weighings");
+  redirect(`${back}?ok=layout`);
 }
 
-export async function createScalePresets() {
+export async function createScalePresets(formData?: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const rawBack = formData ? String(formData.get("back") ?? "/import") : "/import";
+  const back = rawBack.startsWith("/weighings") ? "/weighings" : "/import";
   const supabase = await createClient();
   const farmId = ctx.active.id;
 
@@ -123,7 +136,8 @@ export async function createScalePresets() {
   }
 
   revalidatePath("/import");
-  redirect("/import?ok=presets");
+  revalidatePath("/weighings");
+  redirect(`${back}?ok=presets`);
 }
 
 export async function confirmImport(formData: FormData) {
@@ -153,11 +167,16 @@ export async function confirmImport(formData: FormData) {
     redirect(`/import/${batch}?erro=${code}`);
   }
   revalidatePath("/herd");
+  revalidatePath("/weighings");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
   revalidatePath("/import");
   redirect(`/import/${batch}?ok=1`);
 }
 
 export async function cancelImport(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const batch = String(formData.get("batch") ?? "");
   if (!UUID.test(batch)) redirect("/import");
   const supabase = await createClient();

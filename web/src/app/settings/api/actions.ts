@@ -30,6 +30,8 @@ export async function createApiKey(_prev: KeyState, formData: FormData): Promise
 }
 
 export async function revokeApiKey(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   if (!UUID.test(id)) redirect("/settings/api");
   const supabase = await createClient();

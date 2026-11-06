@@ -26,11 +26,18 @@ export async function createPerson(formData: FormData) {
 }
 
 export async function setPersonActive(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   const active = formData.get("active") === "true";
   if (!UUID.test(id)) redirect("/people");
   const supabase = await createClient();
-  const { data, error } = await supabase.from("people").update({ active }).eq("id", id).select("id");
+  const { data, error } = await supabase
+    .from("people")
+    .update({ active })
+    .eq("id", id)
+    .eq("farm_id", ctx.active.id)
+    .select("id");
   if (error || !data || data.length === 0) redirect("/people?erro=perm");
   revalidatePath("/people");
   redirect("/people?ok=1");

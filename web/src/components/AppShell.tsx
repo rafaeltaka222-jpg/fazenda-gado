@@ -1,202 +1,88 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import BullLogo from "./BullLogo";
-import { createClient } from "@/lib/supabase/server";
-import type { FarmItem } from "@/lib/context";
+import TopbarProfileMenu from "./TopbarProfileMenu";
+import SidebarNav, { NavGroupDef, NavItemDef } from "./SidebarNav";
+import { resolveRolePermissions, type FarmItem } from "@/lib/permissions";
 
-type Item = { href: string; label: string; key: string; perm: string | null };
-
-const GROUPS: { title: string; items: Item[] }[] = [
+const GROUPS: NavGroupDef[] = [
   {
-    title: "Visão Geral",
+    title: "Principal",
     items: [
-      { href: "/dashboard", label: "Painel Principal", key: "dashboard", perm: null },
+      { href: "/dashboard", label: "Dashboard", key: "dashboard", perm: null },
+      { href: "/herd", label: "Animais", key: "herd", perm: "animals.view" },
+      { href: "/structure", label: "Lotes & Pastagens", key: "structure", perm: "lots.view" },
+      { href: "/weighings", label: "Pesagens", key: "weighings", perm: "weighings.view" },
+      { href: "/import", label: "Balança & Importação", key: "import", perm: "imports.view" },
+      { href: "/reports", label: "Relatórios", key: "reports", perm: "reports.view" },
     ],
   },
   {
-    title: "Rebanho & Manejo",
+    title: "Manejo & Sanidade",
     items: [
-      { href: "/herd", label: "Rebanho Ativo", key: "herd", perm: "animals.view" },
-      { href: "/weighings", label: "Pesagens & Curral", key: "weighings", perm: "weighings.view" },
-      { href: "/structure", label: "Pastos & Lotes", key: "structure", perm: "lots.view" },
-      { href: "/inventory", label: "Auditoria de Curral", key: "inventory", perm: "counts.view" },
-    ],
-  },
-  {
-    title: "Sanidade & Zootecnia",
-    items: [
-      { href: "/health", label: "Controle Sanitário", key: "health", perm: "health.view" },
+      { href: "/health", label: "Sanidade & Vacinas", key: "health", perm: "health.view" },
       { href: "/reproduction", label: "Reprodução & IATF", key: "reproduction", perm: "reproduction.view" },
+      { href: "/stock", label: "Nutrição & Estoque", key: "stock", perm: "inventory.view" },
+      { href: "/inventory", label: "Contagem de Curral", key: "inventory", perm: "counts.view" },
+      { href: "/tasks", label: "Alertas & Tarefas", key: "tasks", perm: "tasks.view" },
     ],
   },
   {
-    title: "Comercial & Financeiro",
+    title: "Financeiro",
+    items: [
+      { href: "/finance", label: "Dashboard Financeiro", key: "finance", perm: "costs.view" },
+      { href: "/finance/payables", label: "Contas a Pagar", key: "payables", perm: "costs.view" },
+      { href: "/finance/receivables", label: "Contas a Receber", key: "receivables", perm: "trade.view" },
+      { href: "/costs", label: "Custos & Despesas", key: "costs", perm: "costs.view" },
+    ],
+  },
+  {
+    title: "Comercial & Gestão",
     items: [
       { href: "/sales", label: "Vendas & GTA", key: "sales", perm: "trade.view" },
-      { href: "/costs", label: "Custos & Despesas", key: "costs", perm: "costs.view" },
-      { href: "/stock", label: "Estoque de Insumos", key: "stock", perm: "inventory.view" },
+      { href: "/people", label: "Pessoas & Parceiros", key: "people", perm: "people.view" },
     ],
   },
   {
-    title: "Operações de Campo",
-    items: [
-      { href: "/tasks", label: "Tarefas & Manejo", key: "tasks", perm: "tasks.view" },
-      { href: "/people", label: "Pessoas & Equipe", key: "people", perm: "people.view" },
-      { href: "/import", label: "Importar Planilhas", key: "import", perm: "imports.view" },
-    ],
-  },
-  {
-    title: "Inteligência",
-    items: [
-      { href: "/reports", label: "Relatórios & Análise", key: "reports", perm: "reports.view" },
-    ],
-  },
-  {
-    title: "Administração",
+    title: "Configurações",
     items: [
       { href: "/farms", label: "Fazendas", key: "farms", perm: null },
       { href: "/users", label: "Usuários & Perfis", key: "users", perm: "users.view" },
-      { href: "/settings/fields", label: "Campos Personalizados", key: "fields", perm: "settings.view" },
-      { href: "/settings/api", label: "API & Integrações", key: "api", perm: "settings.update" },
-      { href: "/audit", label: "Trilha de Auditoria", key: "audit", perm: "audit.view" },
-      { href: "/security", label: "Segurança & 2FA", key: "security", perm: null },
+      { href: "/settings/fields", label: "Campos Extras", key: "fields", perm: "settings.view" },
+      { href: "/settings/api", label: "Dispositivos & API", key: "api", perm: "settings.update" },
+      { href: "/audit", label: "Auditoria", key: "audit", perm: "audit.view" },
+      { href: "/security", label: "Segurança (2FA)", key: "security", perm: null },
     ],
   },
 ];
 
-function NavIcon({ name }: { name: string }) {
-  switch (name) {
-    case "dashboard":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z" />
-        </svg>
-      );
-    case "herd":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-      );
-    case "structure":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-        </svg>
-      );
-    case "weighings":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-        </svg>
-      );
-    case "health":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-        </svg>
-      );
-    case "reproduction":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-        </svg>
-      );
-    case "inventory":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      );
-    case "tasks":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      );
-    case "stock":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      );
-    case "costs":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      );
-    case "sales":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-      );
-    case "people":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      );
-    case "import":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-        </svg>
-      );
-    case "reports":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      );
-    case "farms":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      );
-    case "users":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      );
-    case "fields":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-      );
-    case "api":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-        </svg>
-      );
-    case "audit":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      );
-    case "security":
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      );
-    default:
-      return (
-        <svg className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
-  }
+function SidebarPanelIcon({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </svg>
+  );
 }
 
-export default async function AppShell({
+export default function AppShell({
   email,
+  farms,
   active,
   current,
   children,
@@ -207,30 +93,79 @@ export default async function AppShell({
   current: string;
   children: React.ReactNode;
 }) {
-  let perms: string[] | null = null;
-  if (active) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("my_permissions", { p_farm: active.id });
-    perms = error ? null : ((data as string[] | null) ?? []);
-  }
-  const show = (i: Item) => i.perm === null || perms === null || perms.includes(i.perm) || i.key === current;
-  const initial = email ? email.charAt(0).toUpperCase() : "U";
+  // Estado do menu lateral retrátil (aberto por padrão)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Lê preferência do usuário salva no localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("jr_sidebar_open");
+      if (saved !== null) {
+        setIsSidebarOpen(saved === "true");
+      }
+    } catch {
+      // Ignora silenciosamente caso o armazenamento local esteja bloqueado
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("jr_sidebar_open", String(next));
+      } catch {
+        // Ignora silenciosamente
+      }
+      return next;
+    });
+  };
+
+  // Atalho de teclado rápido Ctrl+B / Cmd+B para abrir/fechar o menu
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Resolve permissões instantaneamente em memória sem round-trip extra ao banco
+  const perms: string[] | null = active
+    ? active.permissions ?? resolveRolePermissions(active.role)
+    : null;
+
+  const show = (i: NavItemDef) =>
+    i.perm === null || perms === null || perms.includes(i.perm) || i.key === current;
+
+  const visibleGroups: NavGroupDef[] = GROUPS.map((g) => ({
+    title: g.title,
+    items: g.items.filter(show),
+  })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="shell">
+    <div className={`shell ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
-        {/* Identidade Corporativa Oficial no Topo da Barra Lateral */}
-        <Link href="/dashboard" className="brand-wrapper" style={{ textDecoration: "none" }}>
-          <BullLogo size={42} />
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              JR Comércio
-            </span>
-            <span style={{ fontWeight: 600, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.25 }}>
-              e Exportação de Café
-            </span>
-          </div>
-        </Link>
+        {/* Identidade Corporativa Oficial no Topo da Barra Lateral (Sem botão duplicado) */}
+        <div className="brand-wrapper">
+          <Link
+            href="/dashboard"
+            prefetch={true}
+            style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}
+          >
+            <BullLogo size={40} />
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <span style={{ fontWeight: 800, fontSize: 14.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+                JR Comércio
+              </span>
+              <span style={{ fontWeight: 600, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.25 }}>
+                Gestão Pecuária
+              </span>
+            </div>
+          </Link>
+        </div>
 
         <input type="checkbox" id="navtoggle" className="nav-toggle" aria-label="Abrir menu" />
         <label htmlFor="navtoggle" className="burger">
@@ -258,100 +193,141 @@ export default async function AppShell({
           </span>
         </label>
 
-        <nav className="nav" aria-label="Menu principal">
-          {GROUPS.map((g) => {
-            const items = g.items.filter(show);
-            if (items.length === 0) return null;
-            return (
-              <div key={g.title} className="nav-group">
-                <div className="nav-title">{g.title}</div>
-                {items.map((n) => (
-                  <Link key={n.key} href={n.href} className={"nav-item" + (n.key === current ? " active" : "")}>
-                    <NavIcon name={n.key} />
-                    <span>{n.label}</span>
-                  </Link>
-                ))}
-              </div>
-            );
-          })}
-        </nav>
+        {/* Navegação Acordeão Exclusivo */}
+        <SidebarNav groups={visibleGroups} currentKey={current} />
 
-        {/* Rodapé da Barra Lateral com Alternador de Tema e Status */}
+        {/* Bloco Integrado das Informações da Fazenda no Rodapé da Sidebar (Fiel à Imagem 2) */}
         <div className="sidebar-footer">
-          <ThemeToggle />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, color: "var(--muted)", padding: "0 4px" }}>
-            <span>{active ? active.name : "Nenhuma fazenda"}</span>
-            <span className="badge" style={{ fontSize: 10, padding: "1px 6px" }}>
-              Agro
-            </span>
+          <div className="sidebar-farm-card">
+            <div style={{ padding: "10px 12px 6px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  {active ? (active.name.toLowerCase() === "jr faz" ? "Fazenda jr faz" : `Fazenda ${active.name}`) : "Fazenda jr faz"}
+                </span>
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#10b981",
+                    boxShadow: "0 0 8px rgba(16, 185, 129, 0.8)",
+                  }}
+                  title="Unidade Ativa"
+                />
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span style={{ fontWeight: 500 }}>
+                  {active ? `Unidade ${active.code} • Ativa` : "Unidade 01 • Ativa"}
+                </span>
+              </div>
+            </div>
+
+            {/* Ilustração Vetorial Noturna da Fazenda com Silhuetas de Bovinos */}
+            <div style={{ margin: "0 10px 8px", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+              <svg viewBox="0 0 260 70" style={{ width: "100%", height: 56, display: "block" }} preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="nightSkyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#081014" stopOpacity="0.95" />
+                    <stop offset="60%" stopColor="#0b1b1c" stopOpacity="0.85" />
+                    <stop offset="100%" stopColor="#05100e" stopOpacity="1" />
+                  </linearGradient>
+                </defs>
+                <rect width="260" height="70" fill="url(#nightSkyGrad)" />
+                {/* Colinas ao fundo */}
+                <path d="M0 48 Q 70 28, 140 40 T 260 32 L 260 70 L 0 70 Z" fill="#0c1f18" opacity="0.6" />
+                <path d="M0 54 Q 90 38, 180 48 T 260 42 L 260 70 L 0 70 Z" fill="#091812" opacity="0.85" />
+                <path d="M0 60 Q 110 50, 260 56 L 260 70 L 0 70 Z" fill="#06120b" />
+                {/* Árvore silhueta à esquerda */}
+                <circle cx="100" cy="40" r="12" fill="#050e09" opacity="0.75" />
+                <circle cx="108" cy="38" r="9" fill="#050e09" opacity="0.85" />
+                <circle cx="94" cy="41" r="8" fill="#050e09" opacity="0.8" />
+                <rect x="99" y="44" width="3" height="12" fill="#040906" />
+                {/* Silhuetas de Bovinos Pastando */}
+                <g transform="translate(26, 46) scale(0.65)" fill="#040a06" opacity="0.92">
+                  <path d="M4 12 c1-3 4-5 8-5 h12 c3 0 5 2 6 5 l1 2 c1 0 3-1 4-2 c0 3-1 5-3 6 l-1 6 c0 1-1 2-2 2 h-2 l-1-6 h-10 l-1 6 h-2 c-1 0-2-1-2-2 l1-8 c-2-1-4-2-6-4 z" />
+                </g>
+                <g transform="translate(142, 48) scale(0.55)" fill="#040a06" opacity="0.85">
+                  <path d="M4 12 c1-3 4-5 8-5 h12 c3 0 5 2 6 5 l1 2 c1 0 3-1 4-2 c0 3-1 5-3 6 l-1 6 c0 1-1 2-2 2 h-2 l-1-6 h-10 l-1 6 h-2 c-1 0-2-1-2-2 l1-8 c-2-1-4-2-6-4 z" />
+                </g>
+              </svg>
+            </div>
+
+            {/* Controle de Modo Escuro Integrado Conforme Referência */}
+            <div style={{ padding: "0 10px 10px" }}>
+              <ThemeToggle compact={false} />
+            </div>
           </div>
         </div>
       </aside>
 
       <div className="content">
+        {/* Topbar Formal: Seletor de Fazenda à esquerda, Busca Central e Notificações + Perfil à direita */}
         <header className="topbar">
-          <div className="topbar-left">
+          <div className="topbar-left" style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
+            {/* Bloco de Controle do Menu e Marca JR quando o menu estiver recolhido */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "#10b981",
-                  boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.18)",
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-                JR Comércio e Exportação de Café
-              </span>
-              {active && (
-                <>
-                  <span style={{ color: "var(--line-strong)", fontSize: 14 }}>/</span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "var(--muted)",
-                      background: "var(--bg-subtle)",
-                      border: "1px solid var(--line)",
-                      padding: "3px 10px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    Unidade: {active.code} · {active.name}
-                  </span>
-                </>
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="sidebar-toggle-btn"
+                aria-label={isSidebarOpen ? "Recolher menu lateral (Ctrl+B)" : "Expandir menu lateral (Ctrl+B)"}
+                title={isSidebarOpen ? "Recolher menu lateral (Ctrl+B)" : "Expandir menu lateral (Ctrl+B)"}
+              >
+                <SidebarPanelIcon isOpen={isSidebarOpen} />
+              </button>
+
+              {!isSidebarOpen && (
+                <Link
+                  href="/dashboard"
+                  prefetch={true}
+                  className="topbar-collapsed-brand"
+                  style={{ textDecoration: "none" }}
+                >
+                  <BullLogo size={36} />
+                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+                      JR Comércio
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: 11, color: "var(--muted)", lineHeight: 1.25 }}>
+                      Gestão Pecuária
+                    </span>
+                  </div>
+                </Link>
               )}
             </div>
-          </div>
 
-          <div className="topbar-right">
-            <form action="/search" method="get" role="search" className="searchbox">
+            <form action="/search" method="get" role="search" className="searchbox" style={{ maxWidth: 520, flex: 1 }}>
               <svg className="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input name="q" type="search" minLength={2} placeholder="Buscar brinco, lote..." aria-label="Busca global" />
+              <input
+                name="q"
+                type="search"
+                minLength={2}
+                placeholder="Buscar animais, lotes, pastagens..."
+                aria-label="Busca global"
+                style={{ borderRadius: 999, paddingLeft: 42, height: 42 }}
+              />
             </form>
+          </div>
 
-            {/* Alternador de Tema */}
+          <div className="topbar-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <ThemeToggle compact />
-
-            <div className="user-badge" title={email}>
-              <div className="user-avatar">{initial}</div>
-              <span style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {email}
-              </span>
-            </div>
-            <form action="/auth/signout" method="post">
-              <button className="btn ghost" style={{ padding: "8px 14px", fontSize: 13 }} title="Desconectar da conta">
-                Sair
-              </button>
-            </form>
+            <TopbarProfileMenu
+              email={email}
+              farmName={active?.name}
+              farmCode={active?.code}
+              userRole={active?.role ?? "administrador"}
+              isAdmin={active?.role === "administrador" || perms?.includes("users.view") || false}
+            />
           </div>
         </header>
 
-        <main className="main">{children}</main>
+        <main className="main page-transition">{children}</main>
       </div>
     </div>
   );

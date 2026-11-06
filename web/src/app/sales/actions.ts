@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getContext } from "@/lib/context";
+import { syncSalesToReceivables } from "@/lib/finance";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const g = (f: FormData, k: string) => {
@@ -25,9 +26,19 @@ export async function createSale(formData: FormData) {
     p_total: total, p_doc: g(formData, "document"), p_notes: g(formData, "notes"),
   });
   if (error) redirect(`/sales?erro=${error.code === "42501" ? "perm" : error.message.includes("invalid_buyer") ? "comprador" : "falha"}`);
+
+  // Sincroniza automaticamente a venda com o módulo de Contas a Receber
+  try {
+    await syncSalesToReceivables(ctx.active.id);
+  } catch (syncErr) {
+    console.warn("Could not sync sale to receivables:", syncErr);
+  }
+
   revalidatePath("/sales");
   revalidatePath("/herd");
   revalidatePath("/dashboard");
+  revalidatePath("/finance");
+  revalidatePath("/finance/receivables");
   redirect("/sales?ok=1");
 }
 
@@ -40,8 +51,18 @@ export async function voidSale(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("void_sale", { p_id: id, p_reason: reason });
   if (error) redirect(`/sales?erro=${error.code === "42501" ? "perm" : "estorno"}`);
+
+  // Sincroniza cancelamento da venda com Contas a Receber
+  try {
+    await syncSalesToReceivables(ctx.active.id);
+  } catch (syncErr) {
+    console.warn("Could not sync voided sale to receivables:", syncErr);
+  }
+
   revalidatePath("/sales");
   revalidatePath("/herd");
   revalidatePath("/dashboard");
+  revalidatePath("/finance");
+  revalidatePath("/finance/receivables");
   redirect("/sales?ok=estornado");
 }

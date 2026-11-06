@@ -1,18 +1,15 @@
 import Link from "next/link";
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createCount } from "./actions";
 
-export const instant = false;
 
 const SCOPE: Record<string, string> = { fazenda: "Fazenda Toda", lote: "Lote Específico", pasto: "Pasto / Piquete" };
 const fmtDate = (d: string) => d.split("-").reverse().join("/");
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -28,7 +25,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   }
 
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("counts.view")) {
     return (
       <AppShell {...shell}>
@@ -50,11 +47,16 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Inventário de Campo & Auditoria de Rebanho</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Conferência física de animais no curral contra o saldo de estoque do sistema
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Inventário de Campo & Contagem de Curral
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Conferência física de animais no curral contra o saldo de estoque do sistema
+            </p>
+          </div>
         </div>
       </div>
 

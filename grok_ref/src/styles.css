@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c2a1f;
+  --color-cream: #f6f1e6;
+  --color-cream-2: #fffaf2;
+  --color-leaf: #2f6b45;
+  --color-leaf-deep: #1e4630;
+  --color-gold: #c4a15a;
+  --color-muted: #5c6b60;
+  --color-line: #e4dccb;
+  --color-danger: #8d3b32;
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --radius: 1.25rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-leaf-deep);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+}
+
+@keyframes ken {
+  from {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(-2%, -1%, 0);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translateX(-12vw);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(110vw);
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: translateY(8px) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-ken,
+  .motion-drift,
+  .motion-bob {
+    animation: none !important;
+  }
+}

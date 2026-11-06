@@ -26,10 +26,18 @@ export async function saveReport(formData: FormData) {
 }
 
 export async function deleteReport(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("id") ?? "");
   if (!UUID.test(id)) redirect("/reports");
   const supabase = await createClient();
-  await supabase.from("saved_reports").delete().eq("id", id);
+  // Garante que o relatório pertence à fazenda ativa e protege stores internos do sistema financeiro
+  await supabase
+    .from("saved_reports")
+    .delete()
+    .eq("id", id)
+    .eq("farm_id", ctx.active.id)
+    .not("name", "like", "__fin_%");
   revalidatePath("/reports");
   redirect("/reports?ok=excluida");
 }

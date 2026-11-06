@@ -1,19 +1,16 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { OP_LABEL, TABLE_LABEL, details, recordLabel, type AuditEntry } from "@/lib/audit";
 import { verifyChain } from "./actions";
 
-export const instant = false;
 
 const PAGE = 50;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 type SP = { tabela?: string; op?: string; de?: string; ate?: string; p?: string; chain?: string; linha?: string };
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<SP> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -71,10 +68,20 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <AppShell {...shell}>
-      <div className="head">
-        <h1 className="title">Auditoria</h1>
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Trilha de Auditoria & Compliance
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Registro cronológico imutável de todas as alterações, exclusões e operações no sistema
+            </p>
+          </div>
+        </div>
         <form action={verifyChain}>
-          <button className="btn ghost">Verificar integridade do registro</button>
+          <button className="btn ghost" style={{ fontSize: 13, padding: "8px 14px" }}>Verificar integridade criptográfica</button>
         </form>
       </div>
       {sp.chain === "ok" && <div className="flash">Registro íntegro: nenhuma adulteração foi detectada na cadeia de auditoria desta fazenda.</div>}

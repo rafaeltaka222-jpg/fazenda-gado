@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getContext } from "@/lib/context";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +20,7 @@ function code(error: { code?: string; message: string }): string {
 export async function addMember(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role_id") ?? "");
   if (!email || !UUID.test(role)) redirect("/users?erro=falha");
   const supabase = await createClient();
@@ -29,10 +30,90 @@ export async function addMember(formData: FormData) {
   redirect("/users?ok=adicionado");
 }
 
+export async function createUserWithPassword(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const role = String(formData.get("role_id") ?? "");
+
+  if (!email || !email.includes("@")) redirect("/users?erro=email_invalido");
+  if (!password || password.length < 6) redirect("/users?erro=senha_curta");
+  if (!UUID.test(role)) redirect("/users?erro=falha");
+
+  const admin = createAdminClient();
+  const { data: userList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const existing = (userList?.users ?? []).find((u) => u.email?.toLowerCase() === email);
+
+  let userId: string;
+  if (!existing) {
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName || email.split("@")[0] },
+    });
+    if (createErr || !created?.user) {
+      redirect("/users?erro=falha_criacao");
+    }
+    userId = created.user.id;
+  } else {
+    userId = existing.id;
+    await admin.auth.admin.updateUserById(userId, {
+      password,
+      email_confirm: true,
+      user_metadata: fullName ? { full_name: fullName } : undefined,
+    });
+  }
+
+  const supabase = await createClient();
+  const { error: rpcErr } = await supabase.rpc("add_member_by_email", {
+    p_farm: ctx.active.id,
+    p_email: email,
+    p_role: role,
+  });
+
+  if (rpcErr && !rpcErr.message.includes("already_member")) {
+    redirect(`/users?erro=${code(rpcErr)}`);
+  }
+
+  revalidatePath("/users");
+  redirect("/users?ok=adicionado");
+}
+
+export async function resetMemberPassword(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
+  const userId = String(formData.get("user_id") ?? "");
+  const newPassword = String(formData.get("new_password") ?? "");
+
+  if (!UUID.test(userId) || !newPassword || newPassword.length < 6) {
+    redirect("/users?erro=senha_curta");
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+
+  if (error) redirect("/users?erro=falha");
+  revalidatePath("/users");
+  redirect("/users?ok=senha_alterada");
+}
+
 export async function updateMemberRole(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("membership_id") ?? "");
   const role = String(formData.get("role_id") ?? "");
   if (!UUID.test(id) || !UUID.test(role)) redirect("/users?erro=falha");
+
+  // Regra de Integridade: Ninguém altera o próprio perfil, nem o administrador
+  if (id === ctx.active.membershipId) {
+    redirect("/users?erro=proprio_perfil");
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.from("memberships").update({ role_id: role }).eq("id", id).select("id");
   if (error) redirect(`/users?erro=${code(error)}`);
@@ -42,9 +123,17 @@ export async function updateMemberRole(formData: FormData) {
 }
 
 export async function setMemberStatus(formData: FormData) {
+  const ctx = await getContext();
+  if (!ctx.active) redirect("/farms");
   const id = String(formData.get("membership_id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!UUID.test(id) || !["active", "suspended"].includes(status)) redirect("/users?erro=falha");
+
+  // Regra de Integridade: Ninguém desativa a própria conta
+  if (id === ctx.active.membershipId) {
+    redirect("/users?erro=proprio_status");
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.from("memberships").update({ status }).eq("id", id).select("id");
   if (error) redirect(`/users?erro=${code(error)}`);

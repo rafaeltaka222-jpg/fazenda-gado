@@ -1,12 +1,10 @@
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { ROLE_ORDER, roleLabel } from "@/lib/labels";
 import { createField, setFieldStatus, updateField } from "./actions";
 
-export const instant = false;
 
 const TYPES: [string, string][] = [
   ["text", "Texto"], ["longtext", "Texto longo"], ["integer", "Número inteiro"], ["decimal", "Número decimal"],
@@ -55,7 +53,6 @@ function Flags({ d }: { d?: any }) {
 }
 
 export default async function FieldsPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -69,7 +66,7 @@ export default async function FieldsPage({ searchParams }: { searchParams: Promi
     );
   }
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   const canEdit = perms.includes("settings.update") && perms.includes("settings.create");
   if (!perms.includes("settings.view")) {
     return (
@@ -84,7 +81,19 @@ export default async function FieldsPage({ searchParams }: { searchParams: Promi
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Campos personalizados do animal</h1>
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Campos Extras & Metadados
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Definição de atributos personalizados, regras de visibilidade e filtros dinâmicos
+            </p>
+          </div>
+        </div>
+      </div>
       {sp.ok && <div className="flash">{OK[sp.ok] ?? "Concluído."}</div>}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
 

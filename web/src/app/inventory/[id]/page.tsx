@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
-
-export const instant = false;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUS: Record<string, string> = {
@@ -14,10 +11,8 @@ const STATUS: Record<string, string> = {
 const SCOPE: Record<string, string> = { fazenda: "Fazenda toda", lote: "Lote", pasto: "Pasto" };
 
 export default async function CountPage({ params }: { params: Promise<{ id: string }> }) {
-  await connection();
-  const { id } = await params;
+  const [{ id }, ctx] = await Promise.all([params, getContext()]);
   if (!UUID.test(id)) notFound();
-  const ctx = await getContext();
   const a = ctx.active;
   if (!a) notFound();
   const supabase = await createClient();

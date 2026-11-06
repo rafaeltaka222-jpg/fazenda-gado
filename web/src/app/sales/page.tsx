@@ -1,11 +1,9 @@
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createSale, voidSale } from "./actions";
 
-export const instant = false;
 
 const ERR: Record<string, string> = {
   tags: "Algum brinco não foi encontrado entre os animais ativos.",
@@ -19,7 +17,6 @@ const fmtDate = (d: string) => d.split("-").reverse().join("/");
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; de?: string; ate?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -35,7 +32,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   }
 
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("trade.view")) {
     return (
       <AppShell {...shell}>
@@ -71,11 +68,16 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   return (
     <AppShell {...shell}>
       <div className="head">
-        <div>
-          <h1 className="title" style={{ margin: 0 }}>Gestão Comercial: Vendas & Emissão GTA</h1>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>
-            Registro de comercialização de lotes, faturamento, documentação fiscal, guias sanitárias e estorno auditado
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Gestão Comercial: Vendas & Emissão GTA
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Registro de comercialização de lotes, faturamento, documentação fiscal e guias sanitárias
+            </p>
+          </div>
         </div>
       </div>
 

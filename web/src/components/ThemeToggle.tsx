@@ -8,11 +8,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    const current: "light" | "dark" =
-      saved === "dark" ||
-      (!saved && (document.documentElement.getAttribute("data-theme") === "dark" || window.matchMedia("(prefers-color-scheme: dark)").matches))
-        ? "dark"
-        : "light";
+    const current: "light" | "dark" = saved === "light" ? "light" : "dark";
     setTheme(current);
     
     // Apply theme to documentElement and body

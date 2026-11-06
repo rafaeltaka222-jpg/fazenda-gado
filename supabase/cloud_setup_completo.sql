@@ -3160,22 +3160,29 @@ $$;
 DO $$
 DECLARE
   v_user_id uuid;
+  v_admin_role uuid;
   v_org_id uuid := 'a1b2c3d4-0001-4000-8000-000000000001';
   v_farm_id uuid := '912643de-ce02-4fe1-be4b-b6a2dbd87ef5';
 BEGIN
   SELECT id INTO v_user_id FROM auth.users WHERE lower(email) = 'rafaeltaka222@gmail.com' LIMIT 1;
-  IF v_user_id IS NOT NULL THEN
-    INSERT INTO public.organizations (id, name, document, owner_id)
-    VALUES (v_org_id, 'JR Comércio e Exportação de Café', '', v_user_id)
+  SELECT id INTO v_admin_role FROM public.roles WHERE is_system AND name = 'administrador' LIMIT 1;
+
+  IF v_user_id IS NOT NULL AND v_admin_role IS NOT NULL THEN
+    INSERT INTO public.profiles (id, full_name)
+    VALUES (v_user_id, 'Rafael')
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO public.farms (id, org_id, code, name, city, state)
-    VALUES (v_farm_id, v_org_id, '01', 'jr faz', 'São Paulo', 'SP')
+    INSERT INTO public.organizations (id, name, created_by)
+    VALUES (v_org_id, 'JR Comércio e Exportação de Café', v_user_id)
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO public.farm_members (farm_id, user_id, role, active)
-    VALUES (v_farm_id, v_user_id, 'admin', true)
-    ON CONFLICT (farm_id, user_id) DO UPDATE SET role = 'admin', active = true;
+    INSERT INTO public.farms (id, organization_id, code, name, city, state, created_by)
+    VALUES (v_farm_id, v_org_id, '01', 'jr faz', 'São Paulo', 'SP', v_user_id)
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO public.memberships (user_id, farm_id, role_id, status)
+    VALUES (v_user_id, v_farm_id, v_admin_role, 'active')
+    ON CONFLICT (user_id, farm_id) DO UPDATE SET role_id = v_admin_role, status = 'active';
 
     INSERT INTO public.import_layouts (farm_id, name, delimiter, has_header, date_format, decimal_separator, col_animal, col_date, col_time, col_weight, default_time, device_name)
     SELECT v_farm_id, v.name, v.delimiter, v.has_header, v.date_format, v.decimal_separator, v.col_animal, v.col_date, v.col_time, v.col_weight, v.default_time, v.device_name

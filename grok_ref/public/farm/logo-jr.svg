@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 340" role="img" aria-label="JR Com. e Exp. de Café">
+  <circle cx="180" cy="150" r="128" fill="#6b3a1f"/>
+  <path d="M180 22a128 128 0 0 0 0 256V22z" fill="#1f7a3a"/>
+  <text x="118" y="196" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="168" font-weight="900" fill="#fff">J</text>
+  <text x="246" y="196" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="168" font-weight="900" fill="#fff">R</text>
+  <text x="180" y="312" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="28" font-weight="900" fill="#111" letter-spacing="0.5">COM. E EXP. DE CAFÉ</text>
+</svg>

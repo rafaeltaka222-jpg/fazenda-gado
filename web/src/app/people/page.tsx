@@ -1,11 +1,9 @@
-import { connection } from "next/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { createPerson, setPersonActive } from "./actions";
 
-export const instant = false;
 
 const ROLE: Record<string, string> = {
   funcionario: "Funcionário", proprietario: "Proprietário", veterinario: "Veterinário", zootecnista: "Zootecnista",
@@ -17,7 +15,6 @@ const ERR: Record<string, string> = {
 };
 
 export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ ok?: string; erro?: string; papel?: string }> }) {
-  await connection();
   const sp = await searchParams;
   const ctx = await getContext();
   const a = ctx.active;
@@ -25,17 +22,41 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   if (!a) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Pessoas</h1>
+        <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Pessoas & Parceiros
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Cadastro de colaboradores, veterinários, fornecedores, transportadores e compradores
+            </p>
+          </div>
+        </div>
+      </div>
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
   }
   const supabase = await createClient();
-  const perms: string[] = ((await supabase.rpc("my_permissions", { p_farm: a.id })).data as string[] | null) ?? [];
+  const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("people.view")) {
     return (
       <AppShell {...shell}>
-        <h1 className="title">Pessoas</h1>
+        <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Pessoas & Parceiros
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Cadastro de colaboradores, veterinários, fornecedores, transportadores e compradores
+            </p>
+          </div>
+        </div>
+      </div>
         <div className="card"><p className="muted">Seu perfil não tem permissão para ver o cadastro de pessoas.</p></div>
       </AppShell>
     );
@@ -50,7 +71,19 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
 
   return (
     <AppShell {...shell}>
-      <h1 className="title">Pessoas</h1>
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
+          <div>
+            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Pessoas & Parceiros
+            </h1>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
+              Cadastro de colaboradores, veterinários, fornecedores, transportadores e compradores
+            </p>
+          </div>
+        </div>
+      </div>
       {sp.ok && <div className="flash">Salvo.</div>}
       {sp.erro && <div className="flash bad" role="alert">{ERR[sp.erro] ?? ERR.falha}</div>}
       <form className="card filters" method="get">
