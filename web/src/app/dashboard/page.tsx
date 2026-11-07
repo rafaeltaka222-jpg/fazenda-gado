@@ -230,16 +230,16 @@ export default async function DashboardPage({
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 4, height: 32, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
           <div>
-            <h1 style={{ fontSize: 25, fontWeight: 800, margin: 0, color: "#ffffff", letterSpacing: "-0.01em" }}>
+            <h1 style={{ fontSize: 25, fontWeight: 800, margin: 0, color: "var(--ink)", letterSpacing: "-0.01em" }}>
               Dashboard — {a.name.toLowerCase() === "jr faz" ? "JR Faz" : a.name}
             </h1>
-            <p style={{ margin: "4px 0 0 0", fontSize: 13.5, color: "#94a3b8" }}>
+            <p style={{ margin: "4px 0 0 0", fontSize: 13.5, color: "var(--muted)" }}>
               Visão geral do rebanho e indicadores da unidade ({a.code} - {a.name.toLowerCase() === "jr faz" ? "JR Faz" : a.name})
             </p>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <Link
             href="/weighings"
             prefetch={true}
@@ -251,10 +251,11 @@ export default async function DashboardPage({
               alignItems: "center",
               gap: 8,
               borderRadius: 10,
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              color: "#e2e8f0",
+              background: "var(--surface)",
+              border: "1px solid var(--line-strong)",
+              color: "var(--ink)",
               textDecoration: "none",
+              boxShadow: "var(--shadow-sm)",
               transition: "all 0.15s ease",
             }}
           >

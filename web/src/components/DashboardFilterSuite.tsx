@@ -145,8 +145,19 @@ export default function DashboardFilterSuite({
             )}
           </button>
 
-          {/* Presets de Período em Chips Rápidos */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          {/* Presets de Período em Chips Rápidos com Rolagem Suave no Mobile */}
+          <div
+            className="period-presets-scroll"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              overflowX: "auto",
+              maxWidth: "100%",
+              paddingBottom: 2,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             {[
               { id: "todos", label: "Histórico Total" },
               { id: "30d", label: "Últimos 30 dias" },
@@ -166,6 +177,8 @@ export default function DashboardFilterSuite({
                     fontSize: 12,
                     fontWeight: active ? 600 : 500,
                     cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                     border: `1px solid ${active ? "var(--brand)" : "var(--line)"}`,
                     background: active ? "var(--brand-light)" : "var(--surface)",
                     color: active ? "var(--brand)" : "var(--muted)",
@@ -180,8 +193,8 @@ export default function DashboardFilterSuite({
         </div>
 
         {/* Busca por Brinco Rápida */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ position: "relative", minWidth: 200 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 200px" }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <input
               type="text"
               value={searchTerm}

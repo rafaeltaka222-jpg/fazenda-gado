@@ -238,15 +238,15 @@ export default function AgroPecDashboard({
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
                 Total de Animais
               </div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 {fmtNum(totalActive)}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#94a3b8", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 14 }}>
             <span style={{ color: "#10b981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -256,9 +256,9 @@ export default function AgroPecDashboard({
             <span style={{ whiteSpace: "nowrap" }}>vs mês anterior</span>
           </div>
           {/* Onda Decorativa Esmeralda Limpa Abaixo do Texto */}
-          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 16, pointerEvents: "none", opacity: 0.7, zIndex: 0 }} preserveAspectRatio="none">
-            <path d="M0 12 Q 60 6, 120 11 T 240 8 L 240 20 L 0 20 Z" fill="rgba(16, 185, 129, 0.18)" />
-            <path d="M0 12 Q 60 6, 120 11 T 240 8" fill="none" stroke="#10b981" strokeWidth="2" opacity="0.85" />
+          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 14, pointerEvents: "none", opacity: 0.65, zIndex: 0 }} preserveAspectRatio="none">
+            <path d="M0 14 Q 60 8, 120 13 T 240 10 L 240 20 L 0 20 Z" fill="rgba(16, 185, 129, 0.18)" />
+            <path d="M0 14 Q 60 8, 120 13 T 240 10" fill="none" stroke="#10b981" strokeWidth="2" opacity="0.85" />
           </svg>
         </div>
 
@@ -284,15 +284,15 @@ export default function AgroPecDashboard({
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
                 Machos
               </div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 {fmtNum(males)}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#94a3b8", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 14 }}>
             <span style={{ color: "#10b981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -302,9 +302,9 @@ export default function AgroPecDashboard({
             <span style={{ whiteSpace: "nowrap" }}>vs mês anterior</span>
           </div>
           {/* Onda Decorativa Azul Limpa Abaixo do Texto */}
-          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 16, pointerEvents: "none", opacity: 0.7, zIndex: 0 }} preserveAspectRatio="none">
-            <path d="M0 12 Q 60 6, 120 11 T 240 8 L 240 20 L 0 20 Z" fill="rgba(59, 130, 246, 0.18)" />
-            <path d="M0 12 Q 60 6, 120 11 T 240 8" fill="none" stroke="#3b82f6" strokeWidth="2" opacity="0.85" />
+          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 14, pointerEvents: "none", opacity: 0.65, zIndex: 0 }} preserveAspectRatio="none">
+            <path d="M0 14 Q 60 8, 120 13 T 240 10 L 240 20 L 0 20 Z" fill="rgba(59, 130, 246, 0.18)" />
+            <path d="M0 14 Q 60 8, 120 13 T 240 10" fill="none" stroke="#3b82f6" strokeWidth="2" opacity="0.85" />
           </svg>
         </div>
 
@@ -330,15 +330,15 @@ export default function AgroPecDashboard({
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
                 Fêmeas
               </div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 {fmtNum(females)}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#94a3b8", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 14 }}>
             <span style={{ color: "#10b981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -348,9 +348,9 @@ export default function AgroPecDashboard({
             <span style={{ whiteSpace: "nowrap" }}>vs mês anterior</span>
           </div>
           {/* Onda Decorativa Magenta Limpa Abaixo do Texto */}
-          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 16, pointerEvents: "none", opacity: 0.7, zIndex: 0 }} preserveAspectRatio="none">
-            <path d="M0 12 Q 60 6, 120 11 T 240 8 L 240 20 L 0 20 Z" fill="rgba(236, 72, 153, 0.18)" />
-            <path d="M0 12 Q 60 6, 120 11 T 240 8" fill="none" stroke="#ec4899" strokeWidth="2" opacity="0.85" />
+          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 14, pointerEvents: "none", opacity: 0.65, zIndex: 0 }} preserveAspectRatio="none">
+            <path d="M0 14 Q 60 8, 120 13 T 240 10 L 240 20 L 0 20 Z" fill="rgba(236, 72, 153, 0.18)" />
+            <path d="M0 14 Q 60 8, 120 13 T 240 10" fill="none" stroke="#ec4899" strokeWidth="2" opacity="0.85" />
           </svg>
         </div>
 
@@ -375,18 +375,18 @@ export default function AgroPecDashboard({
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
                 Peso Médio
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                   {Math.round(avgWeight)}
                 </span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: "#94a3b8" }}>kg</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: "var(--muted)" }}>kg</span>
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#94a3b8", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 14 }}>
             <span style={{ color: "#10b981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -396,9 +396,9 @@ export default function AgroPecDashboard({
             <span style={{ whiteSpace: "nowrap" }}>vs mês anterior</span>
           </div>
           {/* Onda Decorativa Âmbar Limpa Abaixo do Texto */}
-          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 16, pointerEvents: "none", opacity: 0.7, zIndex: 0 }} preserveAspectRatio="none">
-            <path d="M0 12 Q 60 6, 120 11 T 240 8 L 240 20 L 0 20 Z" fill="rgba(245, 158, 11, 0.18)" />
-            <path d="M0 12 Q 60 6, 120 11 T 240 8" fill="none" stroke="#f59e0b" strokeWidth="2" opacity="0.85" />
+          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 14, pointerEvents: "none", opacity: 0.65, zIndex: 0 }} preserveAspectRatio="none">
+            <path d="M0 14 Q 60 8, 120 13 T 240 10 L 240 20 L 0 20 Z" fill="rgba(245, 158, 11, 0.18)" />
+            <path d="M0 14 Q 60 8, 120 13 T 240 10" fill="none" stroke="#f59e0b" strokeWidth="2" opacity="0.85" />
           </svg>
         </div>
 
@@ -423,18 +423,18 @@ export default function AgroPecDashboard({
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>
                 Ganho de Peso
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                   {fmtDec(avgGmd, 2)}
                 </span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: "#94a3b8" }}>kg/dia</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: "var(--muted)" }}>kg/dia</span>
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#94a3b8", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)", zIndex: 2, position: "relative", marginTop: "auto", marginBottom: 14 }}>
             <span style={{ color: "#10b981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -444,9 +444,9 @@ export default function AgroPecDashboard({
             <span style={{ whiteSpace: "nowrap" }}>vs mês anterior</span>
           </div>
           {/* Onda Decorativa Ciano Limpa Abaixo do Texto */}
-          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 16, pointerEvents: "none", opacity: 0.7, zIndex: 0 }} preserveAspectRatio="none">
-            <path d="M0 12 Q 60 6, 120 11 T 240 8 L 240 20 L 0 20 Z" fill="rgba(6, 182, 212, 0.18)" />
-            <path d="M0 12 Q 60 6, 120 11 T 240 8" fill="none" stroke="#06b6d4" strokeWidth="2" opacity="0.85" />
+          <svg viewBox="0 0 240 20" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: 14, pointerEvents: "none", opacity: 0.65, zIndex: 0 }} preserveAspectRatio="none">
+            <path d="M0 14 Q 60 8, 120 13 T 240 10 L 240 20 L 0 20 Z" fill="rgba(6, 182, 212, 0.18)" />
+            <path d="M0 14 Q 60 8, 120 13 T 240 10" fill="none" stroke="#06b6d4" strokeWidth="2" opacity="0.85" />
           </svg>
         </div>
       </div>

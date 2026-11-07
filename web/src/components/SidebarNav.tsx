@@ -200,9 +200,11 @@ function getMatchingGroupTitle(
 export default function SidebarNav({
   groups,
   currentKey,
+  onNavigate,
 }: {
   groups: NavGroupDef[];
   currentKey: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -330,6 +332,7 @@ export default function SidebarNav({
                           if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                           e.preventDefault();
                           setOptimisticKey(n.key);
+                          onNavigate?.();
                           // Fecha gaveta mobile se estiver aberta
                           const toggle = document.getElementById("navtoggle") as HTMLInputElement | null;
                           if (toggle && toggle.checked) toggle.checked = false;

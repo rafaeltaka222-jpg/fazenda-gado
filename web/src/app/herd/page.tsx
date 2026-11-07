@@ -121,7 +121,7 @@ export default async function HerdPage({
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="head-actions" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <span className="badge neutral" style={{ padding: "6px 12px", fontSize: 13 }}>
             Total: <strong>{total}</strong> animais
           </span>
@@ -174,9 +174,9 @@ export default async function HerdPage({
             <option value="morto">Mortos / Baixas</option>
           </select>
         </label>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="btn" style={{ padding: "10px 18px" }}>Filtrar</button>
-          <Link href="/herd" className="btn ghost" style={{ padding: "10px 14px" }}>Limpar</Link>
+        <div className="filter-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button className="btn" style={{ padding: "10px 18px", justifyContent: "center" }}>Filtrar</button>
+          <Link href="/herd" className="btn ghost" style={{ padding: "10px 14px", justifyContent: "center", textAlign: "center" }}>Limpar</Link>
         </div>
       </form>
 
@@ -249,8 +249,8 @@ export default async function HerdPage({
           </div>
         )}
 
-        {/* Paginação */}
-        <div className="pager" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {/* Paginação Responsiva */}
+        <div className="pager" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <span className="muted" style={{ fontSize: 13.5 }}>
             Exibindo <strong>{animals.data?.length ?? 0}</strong> de <strong>{total}</strong> animais · Página {page} de {pages}
           </span>

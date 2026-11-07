@@ -59,11 +59,11 @@ const GROUPS: NavGroupDef[] = [
   },
 ];
 
-function SidebarPanelIcon({ isOpen }: { isOpen: boolean }) {
+function SidebarPanelIcon({ isOpen }: { isOpen?: boolean }) {
   return (
     <svg
-      width="18"
-      height="18"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -93,10 +93,12 @@ export default function AppShell({
   current: string;
   children: React.ReactNode;
 }) {
-  // Estado do menu lateral retrátil (aberto por padrão)
+  // Estado do menu lateral retrátil no desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Estado do drawer off-canvas no mobile
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Lê preferência do usuário salva no localStorage
+  // Lê preferência do usuário salva no localStorage para desktop
   useEffect(() => {
     try {
       const saved = localStorage.getItem("jr_sidebar_open");
@@ -104,9 +106,21 @@ export default function AppShell({
         setIsSidebarOpen(saved === "true");
       }
     } catch {
-      // Ignora silenciosamente caso o armazenamento local esteja bloqueado
+      // Ignora silenciosamente
     }
   }, []);
+
+  // Trava scroll da tela quando menu mobile estiver aberto
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => {
@@ -120,17 +134,19 @@ export default function AppShell({
     });
   };
 
-  // Atalho de teclado rápido Ctrl+B / Cmd+B para abrir/fechar o menu
+  // Atalhos de teclado (Ctrl+B / Cmd+B para desktop e Escape para fechar mobile)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleSidebar();
+      } else if (e.key === "Escape" && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [isMobileMenuOpen]);
 
   // Resolve permissões com base no papel e permissões ativas
   const perms: string[] = active
@@ -147,12 +163,23 @@ export default function AppShell({
 
   return (
     <div className={`shell ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
-        {/* Identidade Corporativa Oficial no Topo da Barra Lateral (Sem botão duplicado) */}
+      {/* Backdrop de sobreposição suave para o drawer mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Fechar menu"
+        />
+      )}
+
+      {/* Menu Lateral: Fixo/Sticky no Desktop e Off-Canvas Drawer no Mobile */}
+      <aside className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+        {/* Identidade Corporativa Oficial no Topo */}
         <div className="brand-wrapper">
           <Link
             href="/dashboard"
             prefetch={true}
+            onClick={() => setIsMobileMenuOpen(false)}
             style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}
           >
             <BullLogo size={40} />
@@ -165,38 +192,29 @@ export default function AppShell({
               </span>
             </div>
           </Link>
+
+          {/* Botão de Fechar no Mobile */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="sidebar-close-btn mobile-only"
+            aria-label="Fechar menu de navegação"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
-        <input type="checkbox" id="navtoggle" className="nav-toggle" aria-label="Abrir menu" />
-        <label htmlFor="navtoggle" className="burger">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <BullLogo size={32} />
-            <span style={{ fontWeight: 700, fontSize: 14.5 }}>JR Comércio e Exportação de Café</span>
-          </div>
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 13,
-              background: "var(--brand-light)",
-              padding: "4px 8px",
-              borderRadius: 6,
-              color: "var(--brand)",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            Menu
-          </span>
-        </label>
-
         {/* Navegação Acordeão Exclusivo */}
-        <SidebarNav groups={visibleGroups} currentKey={current} />
+        <SidebarNav
+          groups={visibleGroups}
+          currentKey={current}
+          onNavigate={() => setIsMobileMenuOpen(false)}
+        />
 
-        {/* Bloco Integrado das Informações da Fazenda no Rodapé da Sidebar (Fiel à Imagem 2) */}
+        {/* Bloco Integrado das Informações da Fazenda no Rodapé da Sidebar */}
         <div className="sidebar-footer">
           <div className="sidebar-farm-card">
             <div style={{ padding: "10px 12px 6px" }}>
@@ -227,7 +245,7 @@ export default function AppShell({
             </div>
 
             {/* Ilustração Vetorial Noturna da Fazenda com Silhuetas de Bovinos */}
-            <div style={{ margin: "0 10px 8px", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+            <div style={{ margin: "0 10px 10px", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
               <svg viewBox="0 0 260 70" style={{ width: "100%", height: 56, display: "block" }} preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="nightSkyGrad" x1="0" y1="0" x2="0" y2="1">
@@ -255,52 +273,89 @@ export default function AppShell({
                 </g>
               </svg>
             </div>
-
-            {/* Controle de Modo Escuro Integrado Conforme Referência */}
-            <div style={{ padding: "0 10px 10px" }}>
-              <ThemeToggle compact={false} />
-            </div>
           </div>
         </div>
       </aside>
 
+      {/* Conteúdo Principal do Sistema */}
       <div className="content">
-        {/* Topbar Formal: Seletor de Fazenda à esquerda, Busca Central e Notificações + Perfil à direita */}
+        {/* Topbar Responsiva com Layout em 2 Linhas no Mobile e 1 Linha no Desktop */}
         <header className="topbar">
-          <div className="topbar-left" style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
-            {/* Bloco de Controle do Menu e Marca JR quando o menu estiver recolhido */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="topbar-row-main">
+            <div className="topbar-left-group">
+              {/* Botão de Menu para Celular (Mobile Hamburger) */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="sidebar-toggle-btn mobile-only"
+                aria-label="Abrir menu lateral"
+                title="Abrir menu lateral"
+              >
+                <SidebarPanelIcon />
+              </button>
+
+              {/* Botão de Retração no Desktop (Ctrl+B) */}
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="sidebar-toggle-btn"
+                className="sidebar-toggle-btn desktop-only"
                 aria-label={isSidebarOpen ? "Recolher menu lateral (Ctrl+B)" : "Expandir menu lateral (Ctrl+B)"}
                 title={isSidebarOpen ? "Recolher menu lateral (Ctrl+B)" : "Expandir menu lateral (Ctrl+B)"}
               >
                 <SidebarPanelIcon isOpen={isSidebarOpen} />
               </button>
 
-              {!isSidebarOpen && (
-                <Link
-                  href="/dashboard"
-                  prefetch={true}
-                  className="topbar-collapsed-brand"
-                  style={{ textDecoration: "none" }}
-                >
-                  <BullLogo size={36} />
-                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                    <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-                      JR Comércio
-                    </span>
-                    <span style={{ fontWeight: 600, fontSize: 11, color: "var(--muted)", lineHeight: 1.25 }}>
-                      Gestão Pecuária
-                    </span>
-                  </div>
-                </Link>
-              )}
+              {/* Marca exibida no topo do mobile e quando a barra lateral estiver recolhida no desktop */}
+              <Link
+                href="/dashboard"
+                prefetch={true}
+                className={`topbar-brand-link ${!isSidebarOpen ? "brand-visible-collapsed" : ""}`}
+                style={{ textDecoration: "none" }}
+              >
+                <BullLogo size={34} />
+                <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                  <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+                    JR Comércio
+                  </span>
+                  <span style={{ fontWeight: 600, fontSize: 11, color: "var(--muted)", lineHeight: 1.25 }}>
+                    Gestão Pecuária
+                  </span>
+                </div>
+              </Link>
             </div>
 
-            <form action="/search" method="get" role="search" className="searchbox" style={{ maxWidth: 520, flex: 1 }}>
+            {/* Busca Centralizada para Desktop */}
+            <div className="topbar-search-desktop desktop-only">
+              <form action="/search" method="get" role="search" className="searchbox">
+                <svg className="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  name="q"
+                  type="search"
+                  minLength={2}
+                  placeholder="Buscar animais, lotes, pastagens..."
+                  aria-label="Busca global"
+                />
+              </form>
+            </div>
+
+            {/* Ações à Direita: Tema + Perfil */}
+            <div className="topbar-right-group">
+              <ThemeToggle compact />
+              <TopbarProfileMenu
+                email={email}
+                farmName={active?.name}
+                farmCode={active?.code}
+                userRole={active?.role || "visualizacao"}
+                isAdmin={active?.role === "administrador" || perms.includes("users.update")}
+              />
+            </div>
+          </div>
+
+          {/* Segunda linha exclusiva para busca no celular */}
+          <div className="topbar-row-search mobile-only">
+            <form action="/search" method="get" role="search" className="searchbox mobile-searchbox">
               <svg className="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -310,20 +365,8 @@ export default function AppShell({
                 minLength={2}
                 placeholder="Buscar animais, lotes, pastagens..."
                 aria-label="Busca global"
-                style={{ borderRadius: 999, paddingLeft: 42, height: 42 }}
               />
             </form>
-          </div>
-
-          <div className="topbar-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <ThemeToggle compact />
-            <TopbarProfileMenu
-              email={email}
-              farmName={active?.name}
-              farmCode={active?.code}
-              userRole={active?.role || "visualizacao"}
-              isAdmin={active?.role === "administrador" || perms.includes("users.update")}
-            />
           </div>
         </header>
 

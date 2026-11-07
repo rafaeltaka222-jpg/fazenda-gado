@@ -232,6 +232,7 @@ export default function TopbarProfileMenu({
               top: "calc(100% + 8px)",
               right: 0,
               width: 340,
+              maxWidth: "calc(100vw - 24px)",
               background: "var(--surface)",
               border: "1px solid var(--line-strong)",
               borderRadius: 14,
@@ -377,6 +378,7 @@ export default function TopbarProfileMenu({
             setOpenAlerts(false);
           }}
           aria-expanded={openProfile}
+          className="topbar-profile-btn"
           style={{
             display: "flex",
             alignItems: "center",
@@ -403,6 +405,7 @@ export default function TopbarProfileMenu({
             }}
           />
           <div
+            className="topbar-profile-info"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -433,6 +436,7 @@ export default function TopbarProfileMenu({
             </span>
           </div>
           <svg
+            className="topbar-profile-chevron"
             width="15"
             height="15"
             viewBox="0 0 24 24"
@@ -456,6 +460,7 @@ export default function TopbarProfileMenu({
               top: "calc(100% + 8px)",
               right: 0,
               width: 320,
+              maxWidth: "calc(100vw - 24px)",
               background: "var(--surface)",
               border: "1px solid var(--line-strong)",
               borderRadius: 16,
