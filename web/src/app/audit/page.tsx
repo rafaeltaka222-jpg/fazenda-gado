@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getContext } from "@/lib/context";
+import { redirect } from "next/navigation";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
 import { OP_LABEL, TABLE_LABEL, details, recordLabel, type AuditEntry } from "@/lib/audit";
@@ -23,6 +24,11 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         <div className="card">Crie uma fazenda primeiro, na página Fazendas.</div>
       </AppShell>
     );
+  }
+
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  if (!perms.includes("audit.view")) {
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const tabela = sp.tabela && sp.tabela in TABLE_LABEL ? sp.tabela : "";

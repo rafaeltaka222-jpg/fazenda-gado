@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -69,12 +70,7 @@ export default async function FieldsPage({ searchParams }: { searchParams: Promi
   const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   const canEdit = perms.includes("settings.update") && perms.includes("settings.create");
   if (!perms.includes("settings.view")) {
-    return (
-      <AppShell {...shell}>
-        <h1 className="title">Campos personalizados</h1>
-        <div className="card"><p className="muted">Seu perfil não tem permissão para ver as configurações.</p></div>
-      </AppShell>
-    );
+    redirect("/dashboard?erro=sem_permissao");
   }
   const { data } = await supabase.from("field_definitions").select("*").eq("farm_id", a.id).eq("entity", "animal").order("position").order("label");
   const defs: any[] = data ?? [];

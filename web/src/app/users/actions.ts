@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -105,6 +105,12 @@ export async function resetMemberPassword(formData: FormData) {
 export async function updateMemberRole(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("users.update")) {
+    redirect("/users?erro=perm");
+  }
+
   const id = String(formData.get("membership_id") ?? "");
   const role = String(formData.get("role_id") ?? "");
   if (!UUID.test(id) || !UUID.test(role)) redirect("/users?erro=falha");
@@ -115,10 +121,44 @@ export async function updateMemberRole(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("memberships").update({ role_id: role }).eq("id", id).select("id");
-  if (error) redirect(`/users?erro=${code(error)}`);
-  if (!data || data.length === 0) redirect("/users?erro=perm");
+
+  // Obtém os dados do membro alvo para identificar o usuário
+  const { data: targetMem, error: targetErr } = await supabase
+    .from("memberships")
+    .select("id, user_id, farm_id")
+    .eq("id", id)
+    .single();
+
+  if (targetErr || !targetMem) {
+    redirect("/users?erro=falha");
+  }
+
+  if (targetMem.user_id === ctx.user.id) {
+    redirect("/users?erro=proprio_perfil");
+  }
+
+  // Atualiza a associação e sincroniza o perfil do usuário em todas as unidades da organização
+  const { error: syncErr } = await supabase
+    .from("memberships")
+    .update({ role_id: role })
+    .eq("user_id", targetMem.user_id);
+
+  if (syncErr) {
+    // Fallback: se falhar em lote por restrição de política de outra fazenda, atualiza a fazenda atual
+    const { data, error } = await supabase
+      .from("memberships")
+      .update({ role_id: role })
+      .eq("id", id)
+      .select("id");
+    if (error) redirect(`/users?erro=${code(error)}`);
+    if (!data || data.length === 0) redirect("/users?erro=perm");
+  }
+
+  // Purga o cache de layout e páginas para garantir atualização imediata
+  revalidatePath("/", "layout");
   revalidatePath("/users");
+  revalidatePath("/dashboard");
+  revalidatePath("/farms");
   redirect("/users?ok=perfil");
 }
 

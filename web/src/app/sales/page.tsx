@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -34,12 +35,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("trade.view")) {
-    return (
-      <AppShell {...shell}>
-        <h1 className="title">Gestão Comercial & Vendas</h1>
-        <div className="card"><p className="muted">Seu perfil não tem permissão para ver as vendas comerciais.</p></div>
-      </AppShell>
-    );
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Bahia" });

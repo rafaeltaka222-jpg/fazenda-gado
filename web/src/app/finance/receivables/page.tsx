@@ -1,4 +1,5 @@
-import { getContext } from "@/lib/context";
+import { redirect } from "next/navigation";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import AppShell from "@/components/AppShell";
 import { listReceivables, syncSalesToReceivables } from "@/lib/finance";
 import ReceivablesClient from "./ReceivablesClient";
@@ -34,6 +35,11 @@ export default async function ReceivablesPage({
         <div className="card">Selecione uma fazenda ativa primeiro.</div>
       </AppShell>
     );
+  }
+
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  if (!perms.includes("trade.view")) {
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   // Sincroniza vendas antes de carregar

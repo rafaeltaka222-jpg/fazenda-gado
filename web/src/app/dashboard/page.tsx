@@ -5,7 +5,12 @@ import AppShell from "@/components/AppShell";
 import AgroPecDashboard, { AlertData } from "@/components/AgroPecDashboard";
 import DashboardFilterSuite, { FilterableAnimal } from "@/components/DashboardFilterSuite";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ erro?: string; ok?: string }>;
+}) {
+  const sp = searchParams ? await searchParams : {};
   const ctx = await getContext();
   const a = ctx.active;
   const shell = { email: ctx.user.email ?? "", farms: ctx.farms, active: a, current: "dashboard" };
@@ -283,6 +288,32 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {sp.erro === "sem_permissao" && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 20,
+            padding: "14px 18px",
+            borderRadius: 12,
+            background: "rgba(239, 68, 68, 0.12)",
+            border: "1px solid rgba(239, 68, 68, 0.35)",
+            color: "#fca5a5",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            fontSize: 13.5,
+            fontWeight: 600,
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>Acesso restrito: seu perfil de acesso atual não possui permissão para acessar a funcionalidade solicitada.</span>
+        </div>
+      )}
 
       <AgroPecDashboard
         key={a.id}

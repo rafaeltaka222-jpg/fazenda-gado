@@ -1,4 +1,5 @@
-import { getContext } from "@/lib/context";
+import { redirect } from "next/navigation";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import AppShell from "@/components/AppShell";
 import { getFinancialSummary } from "@/lib/finance";
 import FinanceDashboardClient from "./FinanceDashboardClient";
@@ -20,6 +21,11 @@ export default async function FinancePage({
         <div className="card">Selecione uma fazenda ativa primeiro.</div>
       </AppShell>
     );
+  }
+
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  if (!perms.includes("costs.view")) {
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const currentYm = sp.periodo || new Date().toISOString().slice(0, 7);

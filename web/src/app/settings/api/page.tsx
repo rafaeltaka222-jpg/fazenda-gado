@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -36,24 +37,7 @@ export default async function ApiSettingsPage({ searchParams }: { searchParams: 
   const supabase = await createClient();
   const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("settings.update")) {
-    return (
-      <AppShell {...shell}>
-        <div className="head" style={{ marginBottom: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 4, height: 28, background: "#10b981", borderRadius: 4, flexShrink: 0 }} />
-          <div>
-            <h1 className="title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-              Dispositivos & API
-            </h1>
-            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13.5 }}>
-              Gerenciamento de chaves de integração, balanças eletrônicas e webhooks
-            </p>
-          </div>
-        </div>
-      </div>
-        <div className="card"><p className="muted">Seu perfil não tem permissão para gerenciar chaves de API.</p></div>
-      </AppShell>
-    );
+    redirect("/dashboard?erro=sem_permissao");
   }
   const { data } = await supabase.from("api_keys").select("id, name, key_prefix, scopes, expires_at, last_used_at, revoked_at")
     .eq("farm_id", a.id).order("created_at", { ascending: false });

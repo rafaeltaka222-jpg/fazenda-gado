@@ -1,4 +1,5 @@
-import { getContext } from "@/lib/context";
+import { redirect } from "next/navigation";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import AppShell from "@/components/AppShell";
 import { listPayables } from "@/lib/finance";
 import PayablesClient from "./PayablesClient";
@@ -34,6 +35,11 @@ export default async function PayablesPage({
         <div className="card">Selecione uma fazenda ativa primeiro.</div>
       </AppShell>
     );
+  }
+
+  const perms = a.permissions ?? resolveRolePermissions(a.role);
+  if (!perms.includes("costs.view")) {
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const items = await listPayables(a.id);

@@ -9,14 +9,9 @@ export * from "./permissions";
 const fetchContextCached = cache(async () => {
   const supabase = await createClient();
 
-  // Executa autenticação, leitura de cookies e vínculos da fazenda em paralelo (1 único round-trip!)
-  const [authRes, cookieStore, rowsRes] = await Promise.all([
+  const [authRes, cookieStore] = await Promise.all([
     supabase.auth.getUser(),
     cookies(),
-    supabase
-      .from("memberships")
-      .select("id, roles(name, role_permissions(permission_key)), farms(id, code, name)")
-      .eq("status", "active"),
   ]);
 
   const user = authRes.data.user;
@@ -31,13 +26,21 @@ const fetchContextCached = cache(async () => {
     }
   }
 
-  const rows = (rowsRes.data ?? []) as any[];
+  // Consulta estritamente os vínculos ativos do próprio usuário logado (impede vazamento de perfil)
+  const { data: rowsData } = await supabase
+    .from("memberships")
+    .select("id, user_id, farm_id, role_id, status, roles(id, name, is_system, role_permissions(permission_key)), farms(id, code, name)")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+
+  const rows = (rowsData ?? []) as any[];
   const farms: FarmItem[] = rows
-    .filter((r) => r.farms)
+    .filter((r) => r.farms && r.farms.id)
     .map((r) => {
-      const roleName = r.roles?.name ?? "administrador";
-      const rawPerms = Array.isArray(r.roles?.role_permissions)
-        ? r.roles.role_permissions.map((rp: any) => String(rp.permission_key))
+      const roleObj = Array.isArray(r.roles) ? r.roles[0] : r.roles;
+      const roleName = String(roleObj?.name ?? "").trim().toLowerCase() || "visualizacao";
+      const rawPerms = Array.isArray(roleObj?.role_permissions)
+        ? roleObj.role_permissions.map((rp: any) => String(rp.permission_key))
         : null;
       return {
         membershipId: r.id,
@@ -48,6 +51,9 @@ const fetchContextCached = cache(async () => {
         permissions: resolveRolePermissions(roleName, rawPerms),
       };
     });
+
+  // Ordenação determinística por código da fazenda (ex: 01 - jr faz sempre primeiro)
+  farms.sort((a, b) => (a.code || "").localeCompare(b.code || ""));
 
   const saved = cookieStore.get("farm_id")?.value;
   const active = farms.find((f) => f.id === saved) ?? farms[0] ?? null;

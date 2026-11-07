@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -54,14 +55,7 @@ export default async function UsersPage({
   const supabase = await createClient();
   const perms: string[] = a.permissions ?? resolveRolePermissions(a.role);
   if (!perms.includes("users.view")) {
-    return (
-      <AppShell {...shell}>
-        <h1 className="title">Usuários & Perfis</h1>
-        <div className="card">
-          <p className="muted">Seu perfil não tem permissão para ver os usuários da fazenda.</p>
-        </div>
-      </AppShell>
-    );
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const canCreate = perms.includes("users.create");

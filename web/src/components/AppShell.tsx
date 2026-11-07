@@ -132,13 +132,13 @@ export default function AppShell({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Resolve permissões instantaneamente em memória sem round-trip extra ao banco
-  const perms: string[] | null = active
+  // Resolve permissões com base no papel e permissões ativas
+  const perms: string[] = active
     ? active.permissions ?? resolveRolePermissions(active.role)
-    : null;
+    : [];
 
   const show = (i: NavItemDef) =>
-    i.perm === null || perms === null || perms.includes(i.perm) || i.key === current;
+    i.perm === null || perms.includes(i.perm);
 
   const visibleGroups: NavGroupDef[] = GROUPS.map((g) => ({
     title: g.title,
@@ -321,8 +321,8 @@ export default function AppShell({
               email={email}
               farmName={active?.name}
               farmCode={active?.code}
-              userRole={active?.role ?? "administrador"}
-              isAdmin={active?.role === "administrador" || perms?.includes("users.view") || false}
+              userRole={active?.role || "visualizacao"}
+              isAdmin={active?.role === "administrador" || perms.includes("users.update")}
             />
           </div>
         </header>
