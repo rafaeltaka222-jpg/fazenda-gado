@@ -87,6 +87,12 @@ export default async function AnimalPage({
   const wAll: any[] = wRes.data ?? [];
   const wAct = wAll.filter((w) => !w.voided_at);
   const lastW = wAct[0];
+  const prevW = wAct[1];
+  const gmdKgDay =
+    lastW && prevW
+      ? (Number(lastW.weight_kg) - Number(prevW.weight_kg)) /
+        Math.max(1, (new Date(lastW.weighed_at).getTime() - new Date(prevW.weighed_at).getTime()) / 86400000)
+      : null;
   const fmtKg = (v: number) => Number(v).toFixed(1).replace(".", ",");
   const fmtArroba = (kg: number) => (kg / 30).toFixed(1).replace(".", ",");
   const fmtDT = (s: string) =>
@@ -720,7 +726,7 @@ export default async function AnimalPage({
           </div>
 
           <div>
-            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Peso Atual</div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Peso Atual / GMD</div>
             <div
               style={{
                 fontSize: 15.5,
@@ -730,13 +736,19 @@ export default async function AnimalPage({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                flexWrap: "wrap",
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2">
                 <path d="M6 7h12l2 13H4L6 7z" />
                 <path d="M9 7V5a3 3 0 016 0v2" />
               </svg>
-              <span>{lastW ? `${fmtKg(lastW.weight_kg)} kg` : "425 kg"}</span>
+              <span>{lastW ? `${fmtKg(lastW.weight_kg)} kg` : "Sem pesagem"}</span>
+              {gmdKgDay !== null && (
+                <span className="badge" style={{ fontSize: 11.5 }}>
+                  GMD: {gmdKgDay >= 0 ? "+" : ""}{gmdKgDay.toFixed(2).replace(".", ",")} kg/dia
+                </span>
+              )}
             </div>
           </div>
 
@@ -790,7 +802,7 @@ export default async function AnimalPage({
           <div style={{ paddingRight: 16, borderRight: "1px solid var(--line)" }}>
             <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Pai</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>
-              {sireTag ? `${breedName} ${sireTag}` : `${breedName} 000045`}
+              {sireTag ? `${breedName} ${sireTag}` : "Não informado"}
             </div>
             <div
               style={{
@@ -805,12 +817,12 @@ export default async function AnimalPage({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
-              {an.sire_id ? (
+              {an.sire_id && sireTag ? (
                 <Link href={`/herd/${an.sire_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
                   Brinco {sireTag}
                 </Link>
               ) : (
-                <span>Brinco {sireTag || "000045"}</span>
+                <span className="muted">Sem registro paterno vinculado</span>
               )}
             </div>
           </div>
@@ -818,7 +830,7 @@ export default async function AnimalPage({
           <div>
             <div style={{ fontSize: 12.5, color: "var(--muted)" }}>Mãe</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginTop: 4 }}>
-              {damTag ? `${breedName} ${damTag}` : `${breedName} 000078`}
+              {damTag ? `${breedName} ${damTag}` : "Não informada"}
             </div>
             <div
               style={{
@@ -833,12 +845,12 @@ export default async function AnimalPage({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
-              {an.dam_id ? (
+              {an.dam_id && damTag ? (
                 <Link href={`/herd/${an.dam_id}`} style={{ color: "var(--brand)", fontWeight: 600 }}>
                   Brinco {damTag}
                 </Link>
               ) : (
-                <span>Brinco {damTag || "000078"}</span>
+                <span className="muted">Sem registro materno vinculado</span>
               )}
             </div>
           </div>

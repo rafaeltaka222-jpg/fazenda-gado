@@ -114,7 +114,7 @@ export default async function CostsPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* Detalhamento por Lote e Pasto */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 18 }}>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <strong>Custo Apropriado por Lote</strong>

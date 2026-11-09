@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 
 const g = (f: FormData, k: string) => {
   const v = String(f.get(k) ?? "").trim();
@@ -75,57 +75,93 @@ export async function createPasture(formData: FormData) {
 export async function deleteLot(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("lots.update") && !perms.includes("lots.delete")) {
+    redirect("/structure?erro=del_lote");
+  }
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
 
-  // Regra de integridade: Não é possível excluir um lote que tenha animais. Primeiro movimenta, depois exclui.
+  // Regra de integridade: Não é possível excluir um lote que tenha animais ativos. Primeiro movimenta, depois exclui.
   const { count } = await supabase
     .from("animals")
     .select("id", { count: "exact", head: true })
     .eq("farm_id", ctx.active.id)
     .eq("lot_id", id)
-    .eq("status", "ativo");
+    .eq("status", "ativo")
+    .is("deleted_at", null);
 
   if (count && count > 0) {
     redirect("/structure?erro=lote_com_animais");
   }
 
+  const { data: existing } = await supabase
+    .from("lots")
+    .select("name")
+    .eq("farm_id", ctx.active.id)
+    .eq("id", id)
+    .maybeSingle();
+
+  const archivedName = `${existing?.name ?? "Lote"} [Encerrado ${id.slice(0, 6)}]`;
   const { error } = await supabase
     .from("lots")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({
+      status: "encerrado",
+      name: archivedName,
+    })
     .eq("farm_id", ctx.active.id)
     .eq("id", id);
 
   if (error) redirect("/structure?erro=del_lote");
   revalidatePath("/structure");
+  revalidatePath("/herd");
+  revalidatePath("/dashboard");
   redirect("/structure?ok=lote_removido");
 }
 
 export async function deletePasture(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("pastures.update") && !perms.includes("pastures.delete")) {
+    redirect("/structure?erro=del_pasto");
+  }
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
 
-  // Regra de integridade: Não é possível excluir um pasto que tenha animais. Primeiro movimenta, depois exclui.
+  // Regra de integridade: Não é possível excluir um pasto que tenha animais ativos. Primeiro movimenta, depois exclui.
   const { count } = await supabase
     .from("animals")
     .select("id", { count: "exact", head: true })
     .eq("farm_id", ctx.active.id)
     .eq("pasture_id", id)
-    .eq("status", "ativo");
+    .eq("status", "ativo")
+    .is("deleted_at", null);
 
   if (count && count > 0) {
     redirect("/structure?erro=pasto_com_animais");
   }
 
+  const { data: existing } = await supabase
+    .from("pastures")
+    .select("name")
+    .eq("farm_id", ctx.active.id)
+    .eq("id", id)
+    .maybeSingle();
+
+  const archivedName = `${existing?.name ?? "Pasto"} [Inativo ${id.slice(0, 6)}]`;
   const { error } = await supabase
     .from("pastures")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({
+      status: "inativo",
+      name: archivedName,
+    })
     .eq("farm_id", ctx.active.id)
     .eq("id", id);
 
   if (error) redirect("/structure?erro=del_pasto");
   revalidatePath("/structure");
+  revalidatePath("/herd");
+  revalidatePath("/dashboard");
   redirect("/structure?ok=pasto_removido");
 }

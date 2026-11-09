@@ -13,9 +13,10 @@ const FLASH_MESSAGES: Record<string, string> = {
 const ERROR_MESSAGES: Record<string, string> = {
   campos_obrigatorios: "Preencha a descrição, data de vencimento e valor total.",
   valor_invalido: "Informe um valor de recebimento válido e maior que zero.",
-  falha_baixa: "Não foi possível registrar a baixa. Tente novamente.",
+  falha_baixa: "Não foi possível registrar a baixa. Verifique se o valor não excede o saldo restante.",
   motivo_invalido: "Informe o motivo do cancelamento.",
   falha_cancelamento: "Não foi possível cancelar o recebível.",
+  sem_permissao: "Seu perfil não possui permissão para realizar esta operação.",
 };
 
 export default async function ReceivablesPage({
@@ -38,7 +39,7 @@ export default async function ReceivablesPage({
   }
 
   const perms = a.permissions ?? resolveRolePermissions(a.role);
-  if (!perms.includes("trade.view")) {
+  if (!perms.includes("trade.view") && !perms.includes("costs.view")) {
     redirect("/dashboard?erro=sem_permissao");
   }
 

@@ -186,8 +186,8 @@ export default function ReportsGeneratorStudio({
   ]);
   const [statusFilter, setStatusFilter] = useState<string>("ativo");
   const [categoryFilter, setCategoryFilter] = useState<string>("todos");
-  const [dateFrom, setDateFrom] = useState<string>("2018-01-01");
-  const [dateTo, setDateTo] = useState<string>("2026-12-31");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [groupBy, setGroupBy] = useState<string>("none");
   const [showSum, setShowSum] = useState<boolean>(true);
   const [showAvg, setShowAvg] = useState<boolean>(true);

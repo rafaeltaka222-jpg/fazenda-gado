@@ -21,8 +21,8 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
 
   const supabase = await createClient();
   const [lotsRes, pasturesRes, animalsRes] = await Promise.all([
-    supabase.from("lots").select("id, name, status, notes").eq("farm_id", a.id).order("name"),
-    supabase.from("pastures").select("id, name, area_ha, capacity_heads, status").eq("farm_id", a.id).order("name"),
+    supabase.from("lots").select("id, name, status, notes").eq("farm_id", a.id).eq("status", "ativo").order("name"),
+    supabase.from("pastures").select("id, name, area_ha, capacity_heads, status").eq("farm_id", a.id).neq("status", "inativo").order("name"),
     supabase.from("animals").select("lot_id, pasture_id").eq("farm_id", a.id).eq("status", "ativo"),
   ]);
 

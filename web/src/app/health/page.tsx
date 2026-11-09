@@ -211,7 +211,7 @@ export default async function HealthPage({
       )}
 
       {/* Histórico Recente e Catálogo */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 18 }}>
         {/* Histórico Recente */}
         <div className="card">
           <strong>Histórico Recente de Aplicações</strong>

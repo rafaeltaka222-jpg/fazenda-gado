@@ -10,23 +10,6 @@ const LIMIT = 200;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type SP = { lote?: string; ok?: string; av?: string; erro?: string };
 
-const SAMPLE_RECENT = [
-  { id: "s1", ear_tag: "1234", date: "24/05/2024", time: "10:35", weight: 482.5, gain: 8.7 },
-  { id: "s2", ear_tag: "1233", date: "24/05/2024", time: "10:28", weight: 461.0, gain: 5.2 },
-  { id: "s3", ear_tag: "1232", date: "24/05/2024", time: "10:21", weight: 515.0, gain: -2.1 },
-  { id: "s4", ear_tag: "1231", date: "24/05/2024", time: "10:15", weight: 438.5, gain: 6.3 },
-  { id: "s5", ear_tag: "1230", date: "24/05/2024", time: "10:07", weight: 496.0, gain: 7.8 },
-];
-
-const SAMPLE_PREVIEW = [
-  { line: 1, tag: "1234", date: "24/05/2024", time: "10:35", weight: "482.5", status: "ok", msg: "Registro válido" },
-  { line: 2, tag: "1233", date: "24/05/2024", time: "10:28", weight: "461.0", status: "ok", msg: "Registro válido" },
-  { line: 3, tag: "1232", date: "24/05/2024", time: "10:21", weight: "ABC", status: "erro", msg: "Peso inválido" },
-  { line: 4, tag: "12A5", date: "24/05/2024", time: "10:15", weight: "438.5", status: "erro", msg: "Brinco inválido" },
-  { line: 5, tag: "1230", date: "24/05/2024", time: "10:07", weight: "496.0", status: "ok", msg: "Registro válido" },
-  { line: 6, tag: "1236", date: "24/05/2024", time: "10:50", weight: "470.0", status: "aviso", msg: "Peso muito baixo" },
-];
-
 export default async function WeighingsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const [sp, ctx] = await Promise.all([searchParams, getContext()]);
   const a = ctx.active;
@@ -52,12 +35,12 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
     .limit(LIMIT);
   if (lote) q = q.eq("lot_id", lote);
 
-  const [animals, lots, recentWRes, layoutsRes] = await Promise.all([
+  const [animals, lots, recentWRes, layoutsRes, latestBatchRes] = await Promise.all([
     q,
-    supabase.from("lots").select("id, name").eq("farm_id", a.id).order("name"),
+    supabase.from("lots").select("id, name").eq("farm_id", a.id).eq("status", "ativo").order("name"),
     supabase
       .from("weighings")
-      .select("id, animal_id, weighed_at, weight_kg")
+      .select("id, animal_id, weighed_at, weight_kg, animals(ear_tag)")
       .eq("farm_id", a.id)
       .is("voided_at", null)
       .order("weighed_at", { ascending: false })
@@ -67,7 +50,25 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
       .select("id, name, delimiter, date_format, decimal_separator, device_name")
       .eq("farm_id", a.id)
       .order("name"),
+    supabase
+      .from("import_batches")
+      .select("id, file_name, status, total_rows, ok_rows, warn_rows, error_rows, created_at")
+      .eq("farm_id", a.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  const latestBatch: any = latestBatchRes.data;
+  const previewRowsRes = latestBatch?.id
+    ? await supabase
+        .from("import_rows")
+        .select("id, line_no, ear_tag, weighed_at, weight_kg, status, message")
+        .eq("batch_id", latestBatch.id)
+        .order("line_no")
+        .limit(8)
+    : { data: [] as any[] };
+  const previewRows: any[] = previewRowsRes.data ?? [];
 
   const rows: any[] = animals.data ?? [];
   const rawRecent = (recentWRes.data ?? []) as any[];
@@ -85,7 +86,7 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
   }
   const lotName = (id: string | null) => (id ? (lots.data ?? []).find((l: any) => l.id === id)?.name ?? "—" : "—");
   const tagMap = new Map<string, string>(rows.map((r) => [r.id, r.ear_tag]));
-  const recentRows = rawRecent.slice(0, 6).map((w, idx) => {
+  const recentRows = rawRecent.slice(0, 8).map((w) => {
     const dt = new Date(w.weighed_at);
     const dStr = dt.toLocaleDateString("pt-BR", { timeZone: "America/Bahia" });
     const tStr = dt.toLocaleTimeString("pt-BR", {
@@ -98,9 +99,10 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
       s?.prev_weight != null
         ? Number(w.weight_kg) - Number(s.prev_weight)
         : 0;
+    const joinedTag = Array.isArray(w.animals) ? w.animals[0]?.ear_tag : w.animals?.ear_tag;
     return {
       id: w.id,
-      ear_tag: tagMap.get(w.animal_id) ?? "00" + (idx + 1),
+      ear_tag: joinedTag ?? tagMap.get(w.animal_id) ?? "—",
       date: dStr,
       time: tStr,
       weight: Number(w.weight_kg),
@@ -339,28 +341,16 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
                 marginTop: 12,
                 fontSize: 12.5,
                 color: "var(--muted)",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
               <span>
                 Mostrando {recentRows.length} de {rawRecent.length} registros ({a.name})
               </span>
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                <span style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>&lt;</span>
-                <span
-                  style={{
-                    padding: "4px 9px",
-                    borderRadius: 6,
-                    background: "var(--brand)",
-                    color: "#fff",
-                    fontWeight: 700,
-                  }}
-                >
-                  1
-                </span>
-                <span style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>2</span>
-                <span style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>3</span>
-                <span style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>&gt;</span>
-              </div>
+              <Link href="/reports" className="btn ghost" style={{ padding: "5px 12px", fontSize: 12 }}>
+                Ver histórico completo →
+              </Link>
             </div>
           </div>
 
@@ -460,25 +450,42 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
                   </tr>
                 </thead>
                 <tbody>
-                  {SAMPLE_PREVIEW.map((p) => (
-                    <tr key={p.line}>
-                      <td>{p.line}</td>
-                      <td style={{ fontWeight: 700 }}>{p.tag}</td>
-                      <td>{p.date}</td>
-                      <td>{p.time}</td>
-                      <td style={{ fontWeight: 600 }}>{p.weight}</td>
-                      <td>
-                        {p.status === "ok" ? (
-                          <span style={{ color: "var(--brand)", fontWeight: 700, fontSize: 12.5 }}>✓ OK</span>
-                        ) : p.status === "aviso" ? (
-                          <span style={{ color: "var(--amber)", fontWeight: 700, fontSize: 12.5 }}>▲ Aviso</span>
-                        ) : (
-                          <span style={{ color: "var(--red)", fontWeight: 700, fontSize: 12.5 }}>✕ Erro</span>
-                        )}
+                  {previewRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: 20 }}>
+                        <span className="muted">
+                          Nenhum lote de arquivo enviado ainda. Selecione um arquivo .txt ou .csv acima para validar os registros da balança.
+                        </span>
                       </td>
-                      <td style={{ fontSize: 12.5, color: "var(--ink-secondary)" }}>{p.msg}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    previewRows.map((p: any) => {
+                      const dt = p.weighed_at ? new Date(p.weighed_at) : null;
+                      const dStr = dt ? dt.toLocaleDateString("pt-BR", { timeZone: "America/Bahia" }) : "—";
+                      const tStr = dt
+                        ? dt.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })
+                        : "—";
+                      return (
+                        <tr key={p.id ?? p.line_no}>
+                          <td>{p.line_no}</td>
+                          <td style={{ fontWeight: 700 }}>{p.ear_tag ?? "—"}</td>
+                          <td>{dStr}</td>
+                          <td>{tStr}</td>
+                          <td style={{ fontWeight: 600 }}>{p.weight_kg ?? "—"}</td>
+                          <td>
+                            {p.status === "ok" || p.status === "importada" ? (
+                              <span style={{ color: "var(--brand)", fontWeight: 700, fontSize: 12.5 }}>✓ OK</span>
+                            ) : p.status === "aviso" ? (
+                              <span style={{ color: "var(--amber)", fontWeight: 700, fontSize: 12.5 }}>▲ Aviso</span>
+                            ) : (
+                              <span style={{ color: "var(--red)", fontWeight: 700, fontSize: 12.5 }}>✕ Erro</span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12.5, color: "var(--ink-secondary)" }}>{p.message || "Registro validado"}</td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -491,9 +498,15 @@ export default async function WeighingsPage({ searchParams }: { searchParams: Pr
                 marginTop: 12,
                 fontSize: 12.5,
                 color: "var(--muted)",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
-              <span>10 registros OK • 2 registros com erro • 1 registro com aviso</span>
+              <span>
+                {latestBatch
+                  ? `Último arquivo (${latestBatch.file_name}): ${latestBatch.ok_rows ?? 0} OK • ${latestBatch.error_rows ?? 0} erro(s) • ${latestBatch.warn_rows ?? 0} aviso(s)`
+                  : "0 lotes importados nesta fazenda"}
+              </span>
               <Link href="/import" className="btn ghost" style={{ padding: "5px 12px", fontSize: 12 }}>
                 Ver histórico de lotes
               </Link>

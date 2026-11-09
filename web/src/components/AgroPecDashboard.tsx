@@ -93,12 +93,13 @@ export default function AgroPecDashboard({
   const donutArcs = useMemo(() => {
     const radius = 64;
     const circumference = 2 * Math.PI * radius;
-    let accumulated = 0;
     return rawSlices.map((item, idx) => {
+      const accumulated = rawSlices
+        .slice(0, idx)
+        .reduce((sum, prev) => sum + prev.count / sliceTotal, 0);
       const pct = item.count / sliceTotal;
       const strokeLength = Math.max(0, pct * circumference - 3);
       const offset = circumference - accumulated * circumference;
-      accumulated += pct;
       return {
         ...item,
         pct: (pct * 100).toFixed(1).replace(".", ","),
@@ -709,7 +710,7 @@ export default function AgroPecDashboard({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {alerts.slice(0, 2).map((al) => {
+            {alerts.map((al) => {
               const isUrgent = al.severity === "urgent";
               const isWarning = al.severity === "warning";
               const pillBg = isUrgent ? "#ef4444" : isWarning ? "#f59e0b" : "#10b981";

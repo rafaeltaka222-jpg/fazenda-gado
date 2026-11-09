@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getContext } from "@/lib/context";
+import { parseMoney } from "@/lib/finance";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const g = (f: FormData, k: string) => {
@@ -13,7 +14,7 @@ const g = (f: FormData, k: string) => {
 export async function createCost(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
-  const amount = Number((g(formData, "amount") ?? "").replace(",", "."));
+  const amount = parseMoney(g(formData, "amount"));
   const type = g(formData, "target_type") ?? "fazenda";
   if (!Number.isFinite(amount) || amount <= 0 || !["fazenda", "lote", "pasto", "animal"].includes(type)) redirect("/costs?erro=falha");
   const supabase = await createClient();

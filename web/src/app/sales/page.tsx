@@ -77,7 +77,11 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
-      {sp.ok === "1" && <div className="flash">Venda comercial registrada com sucesso.</div>}
+      {sp.ok === "1" && (
+        <div className="flash">
+          Venda comercial registrada com sucesso e integrada automaticamente ao módulo de Contas a Receber.
+        </div>
+      )}
       {sp.ok === "estornado" && (
         <div className="flash">
           Venda estornada com sucesso. Os animais retornaram automaticamente ao rebanho ativo e a auditoria foi registrada.
@@ -144,13 +148,23 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               <textarea name="tags" rows={3} required placeholder="Ex: 000101, 000102, 000103, 000104" style={{ fontFamily: "monospace" }} />
             </label>
             <label>Data da Negociação *<input name="date" type="date" defaultValue={today} max={today} required /></label>
+            <label>Data de Vencimento (Contas a Receber) *<input name="due_date" type="date" defaultValue={today} required /></label>
             <label>Cliente / Comprador
               <select name="buyer_id" defaultValue="">
                 <option value="">(Selecione um comprador cadastrado)</option>
                 {(buyers.data ?? []).map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </label>
-            <label>Valor Total Negociado (R$) *<input name="total" inputMode="decimal" required placeholder="Ex: 48500.00" /></label>
+            <label>Forma de Recebimento
+              <select name="payment_method" defaultValue="Transferência TED/PIX">
+                <option value="Transferência TED/PIX">Transferência TED / PIX</option>
+                <option value="Pix">Pix</option>
+                <option value="Boleto">Boleto Bancário</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Dinheiro">Dinheiro</option>
+              </select>
+            </label>
+            <label>Valor Total Negociado (R$) *<input name="total" inputMode="decimal" required placeholder="Ex: 48500,00" /></label>
             <label>Documentação (GTA / Nota Fiscal)<input name="document" placeholder="Ex: GTA 482910 / NF-e 12903" /></label>
             <label style={{ gridColumn: "1 / -1" }}>Observações e Condições Comerciais<input name="notes" placeholder="Ex: Frigorífico Boi Bom, pagamento à vista" /></label>
             <div style={{ alignSelf: "end", gridColumn: "1 / -1" }}>

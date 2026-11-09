@@ -63,6 +63,16 @@ export default async function ImportPage({
 
   const layoutList = layouts.data ?? [];
   const batchList = batches.data ?? [];
+  const latestBatch: any = batchList[0] ?? null;
+  const previewRowsRes = latestBatch?.id
+    ? await supabase
+        .from("import_rows")
+        .select("id, line_no, ear_tag, weighed_at, weight_kg, status, message")
+        .eq("batch_id", latestBatch.id)
+        .order("line_no")
+        .limit(8)
+    : { data: [] as any[] };
+  const previewRows: any[] = previewRowsRes.data ?? [];
   const nowStr = new Date().toLocaleString("pt-BR", {
     timeZone: "America/Bahia",
     day: "2-digit",
@@ -322,35 +332,42 @@ export default async function ImportPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { line: 1, tag: "1234", date: "24/05/2024", time: "10:35", weight: "482.5", status: "OK", msg: "Registro válido" },
-                    { line: 2, tag: "1233", date: "24/05/2024", time: "10:28", weight: "461.0", status: "OK", msg: "Registro válido" },
-                    { line: 3, tag: "1232", date: "24/05/2024", time: "10:21", weight: "ABC", status: "Erro", msg: "Peso inválido" },
-                    { line: 4, tag: "12A5", date: "24/05/2024", time: "10:15", weight: "438.5", status: "Erro", msg: "Brinco inválido" },
-                    { line: 5, tag: "1230", date: "24/05/2024", time: "10:07", weight: "496.0", status: "OK", msg: "Registro válido" },
-                    { line: 6, tag: "1236", date: "24/05/2024", time: "10:50", weight: "470.0", status: "Aviso", msg: "Variação atípica" },
-                  ].map((r) => (
-                    <tr key={r.line}>
-                      <td>{r.line}</td>
-                      <td>
-                        <strong>{r.tag}</strong>
-                      </td>
-                      <td>{r.date}</td>
-                      <td>{r.time}</td>
-                      <td>{r.weight}</td>
-                      <td>
-                        <span
-                          className={
-                            "badge " +
-                            (r.status === "OK" ? "" : r.status === "Aviso" ? "amber" : "red")
-                          }
-                        >
-                          {r.status === "OK" ? "✓ OK" : r.status === "Aviso" ? "▲ Aviso" : "✕ Erro"}
+                  {previewRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: 20 }}>
+                        <span className="muted">
+                          Nenhum arquivo enviado recentemente. Selecione um arquivo .txt ou .csv acima para validar as linhas antes da gravação.
                         </span>
                       </td>
-                      <td className="muted">{r.msg}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    previewRows.map((r: any) => {
+                      const dt = r.weighed_at ? new Date(r.weighed_at) : null;
+                      const dStr = dt ? dt.toLocaleDateString("pt-BR", { timeZone: "America/Bahia" }) : "—";
+                      const tStr = dt
+                        ? dt.toLocaleTimeString("pt-BR", { timeZone: "America/Bahia", hour: "2-digit", minute: "2-digit" })
+                        : "—";
+                      const isOk = r.status === "ok" || r.status === "importada";
+                      const isWarn = r.status === "aviso";
+                      return (
+                        <tr key={r.id ?? r.line_no}>
+                          <td>{r.line_no}</td>
+                          <td>
+                            <strong>{r.ear_tag ?? "—"}</strong>
+                          </td>
+                          <td>{dStr}</td>
+                          <td>{tStr}</td>
+                          <td>{r.weight_kg ?? "—"}</td>
+                          <td>
+                            <span className={"badge " + (isOk ? "" : isWarn ? "amber" : "red")}>
+                              {isOk ? "✓ OK" : isWarn ? "▲ Aviso" : "✕ Erro"}
+                            </span>
+                          </td>
+                          <td className="muted">{r.message || "Registro validado"}</td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -410,7 +427,7 @@ export default async function ImportPage({
           </div>
 
           {/* Bottom 2 Action Cards matching Images 1 & 4 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <Link
               href="/weighings"
               className="card"

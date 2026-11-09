@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export type PayableStatus =
   | "pendente"
@@ -108,6 +108,29 @@ export interface FinancialSummary {
 const REPORT_NAME_PAYABLES = "__fin_payables_store__";
 const REPORT_NAME_RECEIVABLES = "__fin_receivables_store__";
 
+export function parseMoney(raw: string | null | undefined): number {
+  const cleaned = String(raw ?? "").replace(/[R$\s]/g, "").trim();
+  if (!cleaned) return NaN;
+  let normalized = cleaned;
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    if (cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")) {
+      normalized = cleaned.replace(/\./g, "").replace(",", ".");
+    } else {
+      normalized = cleaned.replace(/,/g, "");
+    }
+  } else if (cleaned.includes(",")) {
+    normalized = cleaned.replace(",", ".");
+  } else if (cleaned.includes(".")) {
+    const parts = cleaned.split(".");
+    if (parts.length > 2) {
+      normalized = parts.join("");
+    }
+  }
+  const val = Number(normalized);
+  if (!Number.isFinite(val)) return NaN;
+  return Math.round(val * 100) / 100;
+}
+
 function computePayableStatus(
   item: Pick<PayableItem, "dueDate" | "totalAmount" | "paidAmount" | "cancellationReason">
 ): PayableStatus {
@@ -142,20 +165,63 @@ function computeReceivableStatus(
   return "a_receber";
 }
 
+async function readStoreItems(farmId: string, storeName: string): Promise<any[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("saved_reports")
+    .select("definition, updated_at")
+    .eq("farm_id", farmId)
+    .eq("name", storeName)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  const rec = data?.[0];
+  return (rec?.definition as any)?.items ?? [];
+}
+
+async function writeStoreItems(farmId: string, storeName: string, items: any[]): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado.");
+
+  const { data: ownRec } = await supabase
+    .from("saved_reports")
+    .select("id")
+    .eq("farm_id", farmId)
+    .eq("name", storeName)
+    .eq("created_by", user.id)
+    .maybeSingle();
+
+  if (ownRec?.id) {
+    const { error } = await supabase
+      .from("saved_reports")
+      .update({
+        definition: { items },
+        shared: true,
+      })
+      .eq("id", ownRec.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("saved_reports").insert({
+      farm_id: farmId,
+      name: storeName,
+      definition: { items },
+      shared: true,
+    });
+    if (error) throw error;
+  }
+}
+
 /* ============================================================
    CONTAS A PAGAR
 ============================================================ */
 
 export async function listPayables(farmId: string): Promise<PayableItem[]> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("saved_reports")
-    .select("definition")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_PAYABLES)
-    .maybeSingle();
+  const rawItems = await readStoreItems(farmId, REPORT_NAME_PAYABLES);
 
-  const list: PayableItem[] = (data?.definition?.items ?? []).map((item: any) => {
+  const list: PayableItem[] = rawItems.map((item: any) => {
     const paid = Number((item.installments ?? []).reduce((acc: number, cur: any) => acc + (Number(cur.amount) || 0), 0).toFixed(2));
     const total = Number(item.totalAmount || 0);
     const remaining = Math.max(0, Number((total - paid).toFixed(2)));
@@ -183,7 +249,6 @@ export async function savePayable(
   payload: Omit<PayableItem, "id" | "farmId" | "paidAmount" | "remainingAmount" | "status" | "installments" | "createdAt" | "updatedAt">,
   userId?: string
 ): Promise<PayableItem> {
-  const admin = createAdminClient();
   const existing = await listPayables(farmId);
 
   const now = new Date().toISOString();
@@ -203,28 +268,7 @@ export async function savePayable(
   };
 
   const updatedItems = [newItem, ...existing];
-
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_PAYABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  } else {
-    await admin.from("saved_reports").insert({
-      farm_id: farmId,
-      name: REPORT_NAME_PAYABLES,
-      definition: { items: updatedItems },
-      created_by: userId,
-      updated_by: userId,
-    });
-  }
+  await writeStoreItems(farmId, REPORT_NAME_PAYABLES, updatedItems);
 
   return newItem;
 }
@@ -235,16 +279,24 @@ export async function registerPayablePayment(
   installment: Omit<PaymentInstallment, "id" | "registeredAt">,
   userId?: string
 ): Promise<void> {
-  const admin = createAdminClient();
+  const supabase = await createClient();
   const items = await listPayables(farmId);
   const target = items.find((i) => i.id === payableId);
   if (!target) throw new Error("Conta a pagar não encontrada.");
+  if (target.status === "cancelada" || target.status === "paga") {
+    throw new Error("Esta conta já está quitada ou cancelada.");
+  }
+
+  const amt = Math.round(Number(installment.amount) * 100) / 100;
+  if (!Number.isFinite(amt) || amt <= 0 || amt > target.remainingAmount + 0.009) {
+    throw new Error("Valor de pagamento inválido ou superior ao saldo restante.");
+  }
 
   const now = new Date().toISOString();
   const newInst: PaymentInstallment = {
     ...installment,
     id: crypto.randomUUID(),
-    amount: Number(installment.amount),
+    amount: Math.min(amt, target.remainingAmount),
     registeredAt: now,
     registeredBy: userId,
   };
@@ -272,32 +324,33 @@ export async function registerPayablePayment(
       : item
   );
 
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_PAYABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  }
+  await writeStoreItems(farmId, REPORT_NAME_PAYABLES, updatedItems);
 
   // Registra automaticamente a saída na tabela cost_entries para alimentar o fluxo contábil de custos
   try {
-    await admin.from("cost_entries").insert({
+    const catLower = (target.category || "").toLowerCase();
+    const mappedCat =
+      catLower.includes("ração") || catLower.includes("racao") || catLower.includes("suplemento")
+        ? "racao"
+        : catLower.includes("medicamento") || catLower.includes("vacina") || catLower.includes("sanidade")
+        ? "sanidade"
+        : catLower.includes("folha") || catLower.includes("mão") || catLower.includes("mao")
+        ? "mao_de_obra"
+        : catLower.includes("combust")
+        ? "combustivel"
+        : catLower.includes("manuten") || catLower.includes("peça")
+        ? "manutencao"
+        : "outros";
+
+    await supabase.from("cost_entries").insert({
       farm_id: farmId,
-      date: installment.date,
-      category: target.category,
+      target_type: "fazenda",
+      cost_date: installment.date,
+      category: mappedCat,
       description: `Pagamento: ${target.description} (Doc: ${target.documentNumber || "S/N"}) [${installment.method}]`,
       amount: newInst.amount,
-      created_by: userId,
     });
   } catch (err) {
-    // Ignora se cost_entries tiver alguma constraint não atendida
     console.warn("Could not insert cost_entry log:", err);
   }
 }
@@ -308,7 +361,7 @@ export async function cancelPayable(
   reason: string,
   userId?: string
 ): Promise<void> {
-  const admin = createAdminClient();
+  void userId;
   const items = await listPayables(farmId);
   const now = new Date().toISOString();
 
@@ -324,35 +377,37 @@ export async function cancelPayable(
       : item
   );
 
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_PAYABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  }
+  await writeStoreItems(farmId, REPORT_NAME_PAYABLES, updatedItems);
 }
 
 /* ============================================================
    CONTAS A RECEBER & INTEGRAÇÃO COM VENDAS
 ============================================================ */
 
-export async function syncSalesToReceivables(farmId: string): Promise<void> {
-  const admin = createAdminClient();
+export async function syncSalesToReceivables(
+  farmId: string,
+  opts?: { saleId?: string; dueDate?: string; paymentMethod?: string; userId?: string }
+): Promise<void> {
+  const supabase = await createClient();
 
-  // 1. Busca todas as vendas desta fazenda
-  const { data: sales } = await admin
-    .from("sales")
-    .select("id, sale_date, total_amount, document_number, notes, voided_at, people(name, tax_id), sale_items(id)")
-    .eq("farm_id", farmId);
+  // 1. Busca todas as vendas e compradores desta fazenda usando as colunas reais do banco
+  const [{ data: sales }, { data: peopleRows }] = await Promise.all([
+    supabase
+      .from("sales")
+      .select("id, sale_date, buyer_id, animal_count, total_amount, document, notes, voided_at")
+      .eq("farm_id", farmId)
+      .order("sale_date", { ascending: false }),
+    supabase
+      .from("people")
+      .select("id, name, document")
+      .eq("farm_id", farmId),
+  ]);
 
   if (!sales || sales.length === 0) return;
+
+  const peopleMap = new Map<string, { name: string; document: string | null }>(
+    (peopleRows ?? []).map((p: any) => [p.id, { name: p.name, document: p.document }])
+  );
 
   const currentReceivables = await listReceivables(farmId);
   let changed = false;
@@ -362,40 +417,76 @@ export async function syncSalesToReceivables(farmId: string): Promise<void> {
 
   for (const s of sales) {
     const existing = updatedReceivables.find((r) => r.saleId === s.id);
-    const buyerName = (s.people as any)?.name || "Comprador da Venda";
-    const buyerDoc = (s.people as any)?.tax_id || "";
-    const itemsCount = (s.sale_items as any[])?.length || 1;
+    const buyer = peopleMap.get(s.buyer_id);
+    const buyerName = buyer?.name || "Comprador da Venda";
+    const buyerDoc = buyer?.document || "";
+    const itemsCount = Number(s.animal_count || 1);
+    const docNum = s.document || "";
 
     if (!existing) {
-      // Venda ainda não cadastrada em Contas a Receber
+      if (s.voided_at) continue;
+      // Venda ativa ainda não cadastrada em Contas a Receber
       const total = Number(s.total_amount || 0);
-      const isVoided = Boolean(s.voided_at);
+      const isVoided = false;
+      const effectiveDueDate =
+        opts && opts.saleId === s.id && opts.dueDate ? opts.dueDate : s.sale_date;
+      const effectiveMethod =
+        opts && opts.saleId === s.id && opts.paymentMethod
+          ? opts.paymentMethod
+          : "Transferência TED/PIX";
+
       const newRec: ReceivableItem = {
         id: crypto.randomUUID(),
         farmId,
         saleId: s.id,
-        description: `Venda de Gado - ${itemsCount} cabeça(s) (Doc: ${s.document_number || "S/N"})`,
+        description: `Venda de Gado - ${itemsCount} cabeça(s) (Doc: ${docNum || "S/N"})`,
         category: "Venda de Animais",
         client: buyerName,
         clientDoc: buyerDoc,
-        documentNumber: s.document_number || "",
+        documentNumber: docNum,
         issueDate: s.sale_date,
-        dueDate: s.sale_date,
+        dueDate: effectiveDueDate,
         totalAmount: total,
         receivedAmount: 0,
         remainingAmount: total,
-        paymentMethodDefault: "Transferência TED/PIX",
+        paymentMethodDefault: effectiveMethod,
         notes: s.notes || "",
-        status: isVoided ? "cancelado" : computeReceivableStatus({ dueDate: s.sale_date, totalAmount: total, receivedAmount: 0 }),
+        status: isVoided
+          ? "cancelado"
+          : computeReceivableStatus({
+              dueDate: effectiveDueDate,
+              totalAmount: total,
+              receivedAmount: 0,
+            }),
         cancellationReason: isVoided ? "Venda estornada no módulo de Vendas & GTA" : undefined,
         cancelledAt: s.voided_at || undefined,
         installments: [],
         createdAt: now,
+        createdBy: opts?.userId,
         updatedAt: now,
       };
       updatedReceivables.unshift(newRec);
       changed = true;
     } else {
+      // Atualiza vencimento/forma de pagamento se enviado logo após criar a venda
+      if (opts && opts.saleId === s.id) {
+        if (opts.dueDate && existing.dueDate !== opts.dueDate) {
+          existing.dueDate = opts.dueDate;
+          existing.status = computeReceivableStatus({
+            dueDate: existing.dueDate,
+            totalAmount: existing.totalAmount,
+            receivedAmount: existing.receivedAmount,
+            cancellationReason: existing.cancellationReason,
+          });
+          existing.updatedAt = now;
+          changed = true;
+        }
+        if (opts.paymentMethod && existing.paymentMethodDefault !== opts.paymentMethod) {
+          existing.paymentMethodDefault = opts.paymentMethod;
+          existing.updatedAt = now;
+          changed = true;
+        }
+      }
       // Se a venda foi estornada no módulo de vendas e o recebível ainda não está cancelado
       if (s.voided_at && !existing.cancellationReason) {
         existing.status = "cancelado";
@@ -408,38 +499,14 @@ export async function syncSalesToReceivables(farmId: string): Promise<void> {
   }
 
   if (changed) {
-    const { data: rec } = await admin
-      .from("saved_reports")
-      .select("id")
-      .eq("farm_id", farmId)
-      .eq("name", REPORT_NAME_RECEIVABLES)
-      .maybeSingle();
-
-    if (rec) {
-      await admin
-        .from("saved_reports")
-        .update({ definition: { items: updatedReceivables }, updated_at: now })
-        .eq("id", rec.id);
-    } else {
-      await admin.from("saved_reports").insert({
-        farm_id: farmId,
-        name: REPORT_NAME_RECEIVABLES,
-        definition: { items: updatedReceivables },
-      });
-    }
+    await writeStoreItems(farmId, REPORT_NAME_RECEIVABLES, updatedReceivables);
   }
 }
 
 export async function listReceivables(farmId: string): Promise<ReceivableItem[]> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("saved_reports")
-    .select("definition")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_RECEIVABLES)
-    .maybeSingle();
+  const rawItems = await readStoreItems(farmId, REPORT_NAME_RECEIVABLES);
 
-  const list: ReceivableItem[] = (data?.definition?.items ?? []).map((item: any) => {
+  const list: ReceivableItem[] = rawItems.map((item: any) => {
     const received = Number((item.installments ?? []).reduce((acc: number, cur: any) => acc + (Number(cur.amount) || 0), 0).toFixed(2));
     const total = Number(item.totalAmount || 0);
     const remaining = Math.max(0, Number((total - received).toFixed(2)));
@@ -466,7 +533,6 @@ export async function saveReceivable(
   payload: Omit<ReceivableItem, "id" | "farmId" | "receivedAmount" | "remainingAmount" | "status" | "installments" | "createdAt" | "updatedAt">,
   userId?: string
 ): Promise<ReceivableItem> {
-  const admin = createAdminClient();
   const existing = await listReceivables(farmId);
 
   const now = new Date().toISOString();
@@ -486,28 +552,7 @@ export async function saveReceivable(
   };
 
   const updatedItems = [newItem, ...existing];
-
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_RECEIVABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  } else {
-    await admin.from("saved_reports").insert({
-      farm_id: farmId,
-      name: REPORT_NAME_RECEIVABLES,
-      definition: { items: updatedItems },
-      created_by: userId,
-      updated_by: userId,
-    });
-  }
+  await writeStoreItems(farmId, REPORT_NAME_RECEIVABLES, updatedItems);
 
   return newItem;
 }
@@ -518,16 +563,23 @@ export async function registerReceivablePayment(
   installment: Omit<PaymentInstallment, "id" | "registeredAt">,
   userId?: string
 ): Promise<void> {
-  const admin = createAdminClient();
   const items = await listReceivables(farmId);
   const target = items.find((i) => i.id === receivableId);
   if (!target) throw new Error("Conta a receber não encontrada.");
+  if (target.status === "cancelado" || target.status === "recebido") {
+    throw new Error("Este recebível já está quitado ou cancelado.");
+  }
+
+  const amt = Math.round(Number(installment.amount) * 100) / 100;
+  if (!Number.isFinite(amt) || amt <= 0 || amt > target.remainingAmount + 0.009) {
+    throw new Error("Valor de recebimento inválido ou superior ao saldo restante.");
+  }
 
   const now = new Date().toISOString();
   const newInst: PaymentInstallment = {
     ...installment,
     id: crypto.randomUUID(),
-    amount: Number(installment.amount),
+    amount: Math.min(amt, target.remainingAmount),
     registeredAt: now,
     registeredBy: userId,
   };
@@ -555,19 +607,7 @@ export async function registerReceivablePayment(
       : item
   );
 
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_RECEIVABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  }
+  await writeStoreItems(farmId, REPORT_NAME_RECEIVABLES, updatedItems);
 }
 
 export async function cancelReceivable(
@@ -576,7 +616,7 @@ export async function cancelReceivable(
   reason: string,
   userId?: string
 ): Promise<void> {
-  const admin = createAdminClient();
+  void userId;
   const items = await listReceivables(farmId);
   const now = new Date().toISOString();
 
@@ -592,19 +632,7 @@ export async function cancelReceivable(
       : item
   );
 
-  const { data: rec } = await admin
-    .from("saved_reports")
-    .select("id")
-    .eq("farm_id", farmId)
-    .eq("name", REPORT_NAME_RECEIVABLES)
-    .maybeSingle();
-
-  if (rec) {
-    await admin
-      .from("saved_reports")
-      .update({ definition: { items: updatedItems }, updated_at: now, updated_by: userId })
-      .eq("id", rec.id);
-  }
+  await writeStoreItems(farmId, REPORT_NAME_RECEIVABLES, updatedItems);
 }
 
 /* ============================================================

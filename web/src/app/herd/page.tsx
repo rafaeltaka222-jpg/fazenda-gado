@@ -161,7 +161,7 @@ export default async function HerdPage({
           Lote
           <select name="lote" defaultValue={sp.lote ?? ""}>
             <option value="">Todos os lotes</option>
-            {(lots.data ?? []).map((l: any) => (
+            {activeLots.map((l: any) => (
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>

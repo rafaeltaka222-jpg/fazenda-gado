@@ -233,7 +233,7 @@ export default async function ReproductionPage({
 
       {/* Ações Reprodutivas */}
       {canCreate && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 18 }}>
           {/* Lançamento de Cobertura / IA / DG */}
           <form action={registerEvent} className="card">
             <strong>Registrar Cobertura, Inseminação ou Diagnóstico</strong>

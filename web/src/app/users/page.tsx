@@ -230,7 +230,7 @@ export default async function UsersPage({
                 name="email"
                 type="email"
                 required
-                placeholder="usuario@jrcafe.com.br"
+                placeholder="usuario@jrcomercio.com.br"
                 style={{ padding: "8px 12px" }}
               />
             </label>

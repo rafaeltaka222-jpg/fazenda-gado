@@ -492,7 +492,7 @@ export default function LoginPage() {
                   type="email"
                   inputMode="email"
                   autoComplete="username"
-                  placeholder="nome@jrcafe.com.br"
+                  placeholder="nome@jrcomercio.com.br"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

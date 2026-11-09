@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { ReceivableItem, PaymentInstallment } from "@/lib/finance";
 import {
   createReceivableAction,
@@ -63,6 +63,12 @@ export default function ReceivablesClient({
 
   // Cancel form
   const [cancelReason, setCancelReason] = useState("");
+
+  useEffect(() => {
+    setIsNewModalOpen(false);
+    setSettleTarget(null);
+    setCancelTarget(null);
+  }, [items]);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -425,7 +431,7 @@ export default function ReceivablesClient({
                 <input name="description" required placeholder="Ex: Venda de lote de novilhas / prestação de serviço" style={{ padding: "8px 12px" }} />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Categoria *
                   <select name="category" required style={{ padding: "8px 12px" }}>
@@ -441,7 +447,7 @@ export default function ReceivablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   CPF ou CNPJ do Cliente
                   <input name="clientDoc" placeholder="000.000.000-00" style={{ padding: "8px 12px" }} />
@@ -453,7 +459,7 @@ export default function ReceivablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Data de Venda / Emissão
                   <input name="issueDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} style={{ padding: "8px 12px" }} />
@@ -465,7 +471,7 @@ export default function ReceivablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Valor Total (R$) *
                   <input name="totalAmount" required placeholder="Ex: 45.000,00" style={{ padding: "8px 12px" }} />
@@ -525,7 +531,7 @@ export default function ReceivablesClient({
             <form action={settleReceivableAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input type="hidden" name="receivableId" value={settleTarget.id} />
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Valor Recebido Agora (R$) *
                   <input
@@ -550,7 +556,7 @@ export default function ReceivablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Forma de Recebimento *
                   <select

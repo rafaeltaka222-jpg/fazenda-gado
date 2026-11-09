@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getContext, resolveRolePermissions } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
@@ -35,14 +36,7 @@ export default async function ReportsPage({
   const canBuild = perms.includes("reports.builder");
 
   if (!canView) {
-    return (
-      <AppShell {...shell}>
-        <h1 className="title">Gerador de Relatórios e Tabelas Personalizadas</h1>
-        <div className="card">
-          <p className="muted">Seu perfil não tem permissão para ver relatórios.</p>
-        </div>
-      </AppShell>
-    );
+    redirect("/dashboard?erro=sem_permissao");
   }
 
   const [savedRes, animalsRes, weighingsRes, movementsRes, catsRes, breedsRes, lotsRes, pasturesRes] =
@@ -59,21 +53,22 @@ export default async function ReportsPage({
           "id, ear_tag, name, sex, status, birth_date, entry_date, category_id, breed_id, lot_id, pasture_id, dam_id"
         )
         .eq("farm_id", a.id)
+        .is("deleted_at", null)
         .order("ear_tag")
-        .limit(300),
+        .limit(400),
       supabase
         .from("weighings")
         .select("id, animal_id, weighed_at, weight_kg, notes")
         .eq("farm_id", a.id)
         .is("voided_at", null)
         .order("weighed_at", { ascending: false })
-        .limit(250),
+        .limit(350),
       supabase
         .from("animal_events")
         .select("id, animal_id, event_type, event_date, details")
         .eq("farm_id", a.id)
         .order("event_date", { ascending: false })
-        .limit(200),
+        .limit(250),
       supabase.from("categories").select("id, name").eq("farm_id", a.id).order("name"),
       supabase.from("breeds").select("id, name").eq("farm_id", a.id).order("name"),
       supabase.from("lots").select("id, name").eq("farm_id", a.id).order("name"),
@@ -90,55 +85,79 @@ export default async function ReportsPage({
   const pastureMap = new Map<string, string>(((pasturesRes.data as any[]) ?? []).map((p) => [p.id, String(p.name)]));
   const animalById = new Map<string, any>(rawAnimals.map((an) => [an.id, an]));
 
-  // Build latest weight map per animal_id
+  // Build latest weight map per animal_id and group weighings chronologically per animal
   const latestWeightByAnimalId = new Map<string, number>();
+  const weighingsByAnimal = new Map<string, any[]>();
   for (const w of rawWeighings) {
-    if (w.animal_id && !latestWeightByAnimalId.has(w.animal_id)) {
+    if (!w.animal_id) continue;
+    if (!latestWeightByAnimalId.has(w.animal_id)) {
       latestWeightByAnimalId.set(w.animal_id, Number(w.weight_kg));
     }
+    const arr = weighingsByAnimal.get(w.animal_id) ?? [];
+    arr.push(w);
+    weighingsByAnimal.set(w.animal_id, arr);
   }
 
   const animalRows: ReportAnimalRow[] = rawAnimals.map((r) => ({
     id: r.id,
     tag: r.ear_tag,
     name: r.name,
-    category: (r.category_id && catMap.get(r.category_id)) || "Bovino",
-    breed: (r.breed_id && breedMap.get(r.breed_id)) || "Nelore",
+    category: (r.category_id && catMap.get(r.category_id)) || "Sem categoria",
+    breed: (r.breed_id && breedMap.get(r.breed_id)) || "Sem raça",
     sex: r.sex === "M" ? "M" : "F",
     birth_date: r.birth_date,
     entry_date: r.entry_date,
-    weight_kg: latestWeightByAnimalId.get(r.id) ?? 0,
+    weight_kg: latestWeightByAnimalId.get(r.id) ?? null,
     status: r.status ?? "ativo",
-    lot: (r.lot_id && lotMap.get(r.lot_id)) || "Lote Geral",
-    pasture: (r.pasture_id && pastureMap.get(r.pasture_id)) || "Pasto Central",
+    lot: (r.lot_id && lotMap.get(r.lot_id)) || "Sem lote",
+    pasture: (r.pasture_id && pastureMap.get(r.pasture_id)) || "Sem pasto",
     mother_tag: (r.dam_id && animalById.get(r.dam_id)?.ear_tag) || null,
   }));
 
   const weighingRows: ReportWeighingRow[] = rawWeighings.map((w) => {
     const an = animalById.get(w.animal_id);
+    const list = weighingsByAnimal.get(w.animal_id) ?? [];
+    const idx = list.findIndex((item) => item.id === w.id);
+    const prev = idx >= 0 && idx + 1 < list.length ? list[idx + 1] : null;
+    const curWeight = Number(w.weight_kg ?? 0);
+    const deltaKg = prev ? Number((curWeight - Number(prev.weight_kg)).toFixed(2)) : null;
+    const days =
+      prev && w.weighed_at && prev.weighed_at
+        ? Math.max(1, (new Date(w.weighed_at).getTime() - new Date(prev.weighed_at).getTime()) / 86400000)
+        : null;
+    const gmdVal = deltaKg !== null && days !== null ? Number((deltaKg / days).toFixed(2)) : null;
+
     return {
       id: w.id,
       tag: an?.ear_tag ?? "—",
       weighed_on: w.weighed_at ? String(w.weighed_at).slice(0, 10) : "",
-      weight_kg: Number(w.weight_kg ?? 0),
-      delta_kg: 6.4,
-      gmd: 1.15,
-      category: (an?.category_id && catMap.get(an.category_id)) || "Bovino",
-      lot: (an?.lot_id && lotMap.get(an.lot_id)) || "Lote Geral",
+      weight_kg: curWeight,
+      delta_kg: deltaKg,
+      gmd: gmdVal,
+      category: (an?.category_id && catMap.get(an.category_id)) || "Sem categoria",
+      lot: (an?.lot_id && lotMap.get(an.lot_id)) || "Sem lote",
       status: an?.status ?? "ativo",
     };
   });
 
   const movementRows: ReportMovementRow[] = rawMovements.map((m) => {
     const an = animalById.get(m.animal_id);
+    const d = m.details ?? {};
+    const fromParts: string[] = [];
+    const toParts: string[] = [];
+    if (d.from_lot_id && lotMap.get(d.from_lot_id)) fromParts.push(`Lote ${lotMap.get(d.from_lot_id)}`);
+    if (d.from_pasture_id && pastureMap.get(d.from_pasture_id)) fromParts.push(`Pasto ${pastureMap.get(d.from_pasture_id)}`);
+    if (d.to_lot_id && lotMap.get(d.to_lot_id)) toParts.push(`Lote ${lotMap.get(d.to_lot_id)}`);
+    if (d.to_pasture_id && pastureMap.get(d.to_pasture_id)) toParts.push(`Pasto ${pastureMap.get(d.to_pasture_id)}`);
+
     return {
       id: m.id,
       tag: an?.ear_tag ?? "—",
       occurred_on: m.event_date ? String(m.event_date).slice(0, 10) : "",
       event_type: m.event_type ?? "Transferência",
-      origin: m.details?.from ?? "Pasto Anterior",
-      destination: m.details?.to ?? "Pasto Atual",
-      notes: m.details?.reason ?? "Manejo operacional",
+      origin: fromParts.join(" / ") || d.from || "—",
+      destination: toParts.join(" / ") || d.to || "—",
+      notes: d.notes || d.reason || "—",
       status: an?.status ?? "ativo",
     };
   });

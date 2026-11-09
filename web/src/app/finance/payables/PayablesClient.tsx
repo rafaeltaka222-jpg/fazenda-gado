@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { PayableItem, PaymentInstallment } from "@/lib/finance";
 import {
   createPayableAction,
@@ -68,6 +68,12 @@ export default function PayablesClient({
 
   // Cancel form
   const [cancelReason, setCancelReason] = useState("");
+
+  useEffect(() => {
+    setIsNewModalOpen(false);
+    setSettleTarget(null);
+    setCancelTarget(null);
+  }, [items]);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -420,7 +426,7 @@ export default function PayablesClient({
                 <input name="description" required placeholder="Ex: Compra de 50 sacos de Sal Mineral" style={{ padding: "8px 12px" }} />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Categoria *
                   <select name="category" required style={{ padding: "8px 12px" }}>
@@ -436,7 +442,7 @@ export default function PayablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Número do Documento / Nota Fiscal
                   <input name="documentNumber" placeholder="Ex: NF-e 004812" style={{ padding: "8px 12px" }} />
@@ -448,7 +454,7 @@ export default function PayablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Data de Emissão
                   <input name="issueDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} style={{ padding: "8px 12px" }} />
@@ -513,7 +519,7 @@ export default function PayablesClient({
             <form action={settlePayableAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input type="hidden" name="payableId" value={settleTarget.id} />
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Valor a Pagar Agora (R$) *
                   <input
@@ -538,7 +544,7 @@ export default function PayablesClient({
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   Forma de Pagamento *
                   <select

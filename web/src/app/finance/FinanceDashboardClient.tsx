@@ -121,7 +121,7 @@ export default function FinanceDashboardClient({
       </div>
 
       {/* DUAS COLUNAS: CONTAS A PAGAR vs CONTAS A RECEBER */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 20 }}>
         {/* BLOCO 1: CONTAS A PAGAR */}
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
@@ -191,7 +191,13 @@ export default function FinanceDashboardClient({
                         {formatBRL(item.remainingAmount)}
                       </strong>
                       <span className="badge" style={{ fontSize: 10, display: "block", marginTop: 2 }}>
-                        {item.status === "vencida" ? "Vencida" : item.status === "a_vencer" ? "A Vencer" : "Pendente"}
+                        {item.status === "vencida"
+                          ? "Vencida"
+                          : item.status === "a_vencer"
+                          ? "A Vencer"
+                          : item.status === "parcialmente_paga"
+                          ? "Parcial"
+                          : "Pendente"}
                       </span>
                     </div>
                   </div>
@@ -270,7 +276,13 @@ export default function FinanceDashboardClient({
                         {formatBRL(item.remainingAmount)}
                       </strong>
                       <span className="badge" style={{ fontSize: 10, display: "block", marginTop: 2 }}>
-                        {item.status === "vencido" ? "Vencido" : item.status === "a_vencer" ? "A Vencer" : "A Receber"}
+                        {item.status === "vencido"
+                          ? "Vencido"
+                          : item.status === "a_vencer"
+                          ? "A Vencer"
+                          : item.status === "parcialmente_recebido"
+                          ? "Parcial"
+                          : "A Receber"}
                       </span>
                     </div>
                   </div>

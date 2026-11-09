@@ -2,22 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import {
   saveReceivable,
   registerReceivablePayment,
   cancelReceivable,
+  parseMoney,
 } from "@/lib/finance";
-
-function parseMoney(val: string): number {
-  if (!val) return 0;
-  const clean = val.replace(/\./g, "").replace(",", ".");
-  return Number(clean) || 0;
-}
 
 export async function createReceivableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("trade.create") && !perms.includes("costs.create")) {
+    redirect("/finance/receivables?erro=sem_permissao");
+  }
 
   const description = String(formData.get("description") ?? "").trim();
   const category = String(formData.get("category") ?? "Venda de Animais").trim();
@@ -30,7 +29,7 @@ export async function createReceivableAction(formData: FormData) {
   const paymentMethodDefault = String(formData.get("paymentMethodDefault") ?? "Transferência TED/PIX").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!description || !dueDate || totalAmount <= 0) {
+  if (!description || !dueDate || !Number.isFinite(totalAmount) || totalAmount <= 0) {
     redirect("/finance/receivables?erro=campos_obrigatorios");
   }
 
@@ -60,6 +59,15 @@ export async function createReceivableAction(formData: FormData) {
 export async function settleReceivableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (
+    !perms.includes("trade.update") &&
+    !perms.includes("trade.create") &&
+    !perms.includes("costs.update") &&
+    !perms.includes("costs.create")
+  ) {
+    redirect("/finance/receivables?erro=sem_permissao");
+  }
 
   const receivableId = String(formData.get("receivableId") ?? "");
   const amount = parseMoney(String(formData.get("amount") ?? ""));
@@ -69,7 +77,7 @@ export async function settleReceivableAction(formData: FormData) {
   const receiptNumber = String(formData.get("receiptNumber") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!receivableId || amount <= 0) {
+  if (!receivableId || !Number.isFinite(amount) || amount <= 0) {
     redirect("/finance/receivables?erro=valor_invalido");
   }
 
@@ -100,6 +108,10 @@ export async function settleReceivableAction(formData: FormData) {
 export async function cancelReceivableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("trade.update") && !perms.includes("costs.update")) {
+    redirect("/finance/receivables?erro=sem_permissao");
+  }
 
   const receivableId = String(formData.get("receivableId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();

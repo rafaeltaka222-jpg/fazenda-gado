@@ -41,13 +41,15 @@ export default async function NewAnimalPage({ searchParams }: { searchParams: Pr
   }
 
   const supabase = await createClient();
-  let [breeds, cats, lots, pastures, defs] = await Promise.all([
+  const [breedsInit, catsInit, lots, pastures, defs] = await Promise.all([
     supabase.from("breeds").select("id, name").eq("farm_id", a.id).order("name"),
     supabase.from("categories").select("id, name").eq("farm_id", a.id).order("name"),
-    supabase.from("lots").select("id, name").eq("farm_id", a.id).order("name"),
-    supabase.from("pastures").select("id, name").eq("farm_id", a.id).order("name"),
+    supabase.from("lots").select("id, name").eq("farm_id", a.id).eq("status", "ativo").order("name"),
+    supabase.from("pastures").select("id, name").eq("farm_id", a.id).neq("status", "inativo").order("name"),
     loadAnimalDefs(supabase, a.id, a.role),
   ]);
+  let breeds = breedsInit;
+  let cats = catsInit;
 
   if ((breeds.data ?? []).length === 0 || (cats.data ?? []).length === 0) {
     const defaultBreeds = ["Nelore", "Girolando", "Angus", "Brahman", "Senepol"];

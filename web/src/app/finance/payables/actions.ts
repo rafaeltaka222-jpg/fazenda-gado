@@ -2,22 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getContext } from "@/lib/context";
+import { getContext, resolveRolePermissions } from "@/lib/context";
 import {
   savePayable,
   registerPayablePayment,
   cancelPayable,
+  parseMoney,
 } from "@/lib/finance";
-
-function parseMoney(val: string): number {
-  if (!val) return 0;
-  const clean = val.replace(/\./g, "").replace(",", ".");
-  return Number(clean) || 0;
-}
 
 export async function createPayableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("costs.create")) {
+    redirect("/finance/payables?erro=sem_permissao");
+  }
 
   const description = String(formData.get("description") ?? "").trim();
   const category = String(formData.get("category") ?? "Despesas Operacionais").trim();
@@ -29,7 +28,7 @@ export async function createPayableAction(formData: FormData) {
   const paymentMethodDefault = String(formData.get("paymentMethodDefault") ?? "Pix").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!description || !dueDate || totalAmount <= 0) {
+  if (!description || !dueDate || !Number.isFinite(totalAmount) || totalAmount <= 0) {
     redirect("/finance/payables?erro=campos_obrigatorios");
   }
 
@@ -51,6 +50,7 @@ export async function createPayableAction(formData: FormData) {
 
   revalidatePath("/finance/payables");
   revalidatePath("/finance");
+  revalidatePath("/costs");
   revalidatePath("/dashboard");
   redirect("/finance/payables?ok=cadastrado");
 }
@@ -58,6 +58,10 @@ export async function createPayableAction(formData: FormData) {
 export async function settlePayableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("costs.update") && !perms.includes("costs.create")) {
+    redirect("/finance/payables?erro=sem_permissao");
+  }
 
   const payableId = String(formData.get("payableId") ?? "");
   const amount = parseMoney(String(formData.get("amount") ?? ""));
@@ -67,7 +71,7 @@ export async function settlePayableAction(formData: FormData) {
   const receiptNumber = String(formData.get("receiptNumber") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!payableId || amount <= 0) {
+  if (!payableId || !Number.isFinite(amount) || amount <= 0) {
     redirect("/finance/payables?erro=valor_invalido");
   }
 
@@ -91,6 +95,7 @@ export async function settlePayableAction(formData: FormData) {
 
   revalidatePath("/finance/payables");
   revalidatePath("/finance");
+  revalidatePath("/costs");
   revalidatePath("/dashboard");
   redirect("/finance/payables?ok=baixa_sucesso");
 }
@@ -98,6 +103,10 @@ export async function settlePayableAction(formData: FormData) {
 export async function cancelPayableAction(formData: FormData) {
   const ctx = await getContext();
   if (!ctx.active) redirect("/farms");
+  const perms = ctx.active.permissions ?? resolveRolePermissions(ctx.active.role);
+  if (!perms.includes("costs.update")) {
+    redirect("/finance/payables?erro=sem_permissao");
+  }
 
   const payableId = String(formData.get("payableId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
